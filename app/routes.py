@@ -1,38 +1,8 @@
-from app import app
+from app import app, supabase
 from flask import render_template, request, jsonify, redirect, url_for
 from datetime import datetime
 import json
 import os
-
-# In-memory storage for attendance data (you can replace this with a database)
-attendance_records = {}
-students_data = [
-    {'roll_number': '001', 'name': 'John Smith'},
-    {'roll_number': '002', 'name': 'Emma Johnson'},
-    {'roll_number': '003', 'name': 'Michael Brown'},
-    {'roll_number': '004', 'name': 'Sarah Davis'},
-    {'roll_number': '005', 'name': 'David Wilson'},
-    {'roll_number': '006', 'name': 'Lisa Anderson'},
-    {'roll_number': '007', 'name': 'James Taylor'},
-    {'roll_number': '008', 'name': 'Jennifer Martinez'},
-    {'roll_number': '009', 'name': 'Robert Garcia'},
-    {'roll_number': '010', 'name': 'Maria Rodriguez'},
-    {'roll_number': '011', 'name': 'Christopher Lee'},
-    {'roll_number': '012', 'name': 'Amanda White'},
-    {'roll_number': '013', 'name': 'Matthew Harris'},
-    {'roll_number': '014', 'name': 'Jessica Clark'},
-    {'roll_number': '015', 'name': 'Andrew Lewis'},
-    {'roll_number': '016', 'name': 'Ashley Walker'},
-    {'roll_number': '017', 'name': 'Joshua Hall'},
-    {'roll_number': '018', 'name': 'Nicole Allen'},
-    {'roll_number': '019', 'name': 'Daniel Young'},
-    {'roll_number': '020', 'name': 'Stephanie King'},
-    {'roll_number': '021', 'name': 'Ryan Wright'},
-    {'roll_number': '022', 'name': 'Megan Lopez'},
-    {'roll_number': '023', 'name': 'Kevin Hill'},
-    {'roll_number': '024', 'name': 'Lauren Green'},
-    {'roll_number': '025', 'name': 'Brandon Adams'}
-]
 
 @app.route('/')
 @app.route('/index')
@@ -41,7 +11,14 @@ def index():
 
 @app.route('/attendance')
 def attendance():
-    return render_template('attendance.html', students=students_data)
+    try:
+        # Get students from Supabase
+        response = supabase.table('students').select('*').execute()
+        students_data = response.data
+        return render_template('attendance.html', students=students_data)
+    except Exception as e:
+        print(f"Error fetching students: {e}")
+        return render_template('attendance.html', students=[])
 
 @app.route('/mark_attendance', methods=['POST'])
 def mark_attendance():
@@ -51,50 +28,85 @@ def mark_attendance():
         status = data.get('status')
         date = data.get('date', datetime.now().strftime('%Y-%m-%d'))
         
-        # Store attendance record
-        if date not in attendance_records:
-            attendance_records[date] = {}
+        # Check if attendance already exists for this student on this date
+        existing = supabase.table('attendance').select('*').eq('roll_number', roll_number).eq('date', date).execute()
         
-        attendance_records[date][roll_number] = {
-            'status': status,
-            'timestamp': datetime.now().isoformat()
-        }
+        if existing.data:
+            # Update existing attendance record
+            response = supabase.table('attendance').update({
+                'status': status,
+                'timestamp': datetime.now().isoformat()
+            }).eq('roll_number', roll_number).eq('date', date).execute()
+        else:
+            # Insert new attendance record
+            response = supabase.table('attendance').insert({
+                'roll_number': roll_number,
+                'status': status,
+                'date': date,
+                'timestamp': datetime.now().isoformat()
+            }).execute()
         
         return jsonify({'success': True, 'message': 'Attendance marked successfully'})
     
     except Exception as e:
+        print(f"Error marking attendance: {e}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/get_attendance/<date>')
 def get_attendance(date):
     try:
-        records = attendance_records.get(date, {})
+        # Get attendance records from Supabase for the specified date
+        response = supabase.table('attendance').select('*').eq('date', date).execute()
+        records = {}
+        for record in response.data:
+            records[record['roll_number']] = {
+                'status': record['status'],
+                'timestamp': record['timestamp']
+            }
         return jsonify({'success': True, 'data': records})
     except Exception as e:
+        print(f"Error fetching attendance: {e}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/export_attendance/<date>')
 def export_attendance(date):
     try:
-        records = attendance_records.get(date, {})
+        # Get students and attendance records from Supabase
+        students_response = supabase.table('students').select('*').execute()
+        attendance_response = supabase.table('attendance').select('*').eq('date', date).execute()
+        
+        # Create a dictionary for quick lookup of attendance records
+        attendance_dict = {}
+        for record in attendance_response.data:
+            attendance_dict[record['roll_number']] = {
+                'status': record['status'],
+                'timestamp': record['timestamp']
+            }
+        
         csv_data = []
         csv_data.append(['Roll Number', 'Name', 'Status', 'Timestamp'])
         
-        for student in students_data:
+        for student in students_response.data:
             roll_number = student['roll_number']
             name = student['name']
-            record = records.get(roll_number, {})
+            record = attendance_dict.get(roll_number, {})
             status = record.get('status', 'not_marked')
             timestamp = record.get('timestamp', '')
             csv_data.append([roll_number, name, status, timestamp])
         
         return jsonify({'success': True, 'data': csv_data})
     except Exception as e:
+        print(f"Error exporting attendance: {e}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/students')
 def get_students():
-    return jsonify({'success': True, 'data': students_data})
+    try:
+        response = supabase.table('students').select('*').execute()
+        return jsonify({'success': True, 'data': response.data})
+    except Exception as e:
+        print(f"Error fetching students: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/add_student', methods=['POST'])
 def add_student():
@@ -104,11 +116,18 @@ def add_student():
         name = data.get('name')
         
         # Check if student already exists
-        if any(s['roll_number'] == roll_number for s in students_data):
+        existing = supabase.table('students').select('*').eq('roll_number', roll_number).execute()
+        if existing.data:
             return jsonify({'success': False, 'error': 'Student with this roll number already exists'}), 400
         
-        students_data.append({'roll_number': roll_number, 'name': name})
+        # Insert new student
+        response = supabase.table('students').insert({
+            'roll_number': roll_number,
+            'name': name
+        }).execute()
+        
         return jsonify({'success': True, 'message': 'Student added successfully'})
     
     except Exception as e:
+        print(f"Error adding student: {e}")
         return jsonify({'success': False, 'error': str(e)}), 400
