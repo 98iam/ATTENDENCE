@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Attendance System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .admin-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        .danger-zone {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        .btn-danger-custom {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        .btn-danger-custom:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            color: white;
+        }
+        .btn-admin {
+            background: #667eea;
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        .btn-admin:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        .log-area {
+            background: #212529;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            border-radius: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 14px;
+        }
+        .nav-link {
+            color: #667eea;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover {
+            background: #667eea;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 shadow-sm mb-4">
+            <div class="container-fluid">
+                <a class="navbar-brand fw-bold text-primary" href="/">
+                    <i class="fas fa-cog me-2"></i>Admin Panel
+                </a>
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="{{ url_for('attendance') }}">
+                        <i class="fas fa-users me-1"></i>Attendance
+                    </a>
+                    <a class="nav-link" href="{{ url_for('history') }}">
+                        <i class="fas fa-history me-1"></i>History
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Statistics Cards -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <i class="fas fa-users fa-2x mb-3"></i>
+                    <h3>{{ stats.get('total_students', 0) }}</h3>
+                    <p>Total Students</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <i class="fas fa-clipboard-check fa-2x mb-3"></i>
+                    <h3>{{ stats.get('total_attendance_records', 0) }}</h3>
+                    <p>Attendance Records</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <i class="fas fa-calendar-alt fa-2x mb-3"></i>
+                    <h3>{{ stats.get('unique_dates', 0) }}</h3>
+                    <p>Days with Attendance</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <i class="fas fa-database fa-2x mb-3"></i>
+                    <h3 id="dbStatus">Unknown</h3>
+                    <p>Database Status</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Management Tools -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="admin-card">
+                    <h4><i class="fas fa-tools me-2"></i>Database Management</h4>
+                    <hr>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Integrity & Validation</h6>
+                            <button class="btn btn-admin w-100 mb-2" onclick="validateIntegrity()">
+                                <i class="fas fa-check-circle me-2"></i>Validate Data Integrity
+                            </button>
+                            <button class="btn btn-admin w-100 mb-2" onclick="getDbStatus()">
+                                <i class="fas fa-info-circle me-2"></i>Check Database Status
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Data Export</h6>
+                            <button class="btn btn-admin w-100 mb-2" onclick="exportAllData()">
+                                <i class="fas fa-download me-2"></i>Export All Data
+                            </button>
+                            <button class="btn btn-admin w-100 mb-2" onclick="exportStudents()">
+                                <i class="fas fa-users me-2"></i>Export Students
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Danger Zone -->
+                    <div class="danger-zone">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h5>
+                        <p class="mb-3">⚠️ These actions cannot be undone. Use with caution!</p>
+                        <button class="btn btn-danger-custom me-2" onclick="clearAllAttendance()">
+                            <i class="fas fa-trash me-2"></i>Clear All Attendance
+                        </button>
+                        <button class="btn btn-danger-custom" onclick="resetDatabase()">
+                            <i class="fas fa-redo me-2"></i>Reset Database
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="admin-card">
+                    <h4><i class="fas fa-calendar-week me-2"></i>Recent Activity</h4>
+                    <hr>
+                    {% if stats.get('recent_dates') %}
+                        <div class="list-group list-group-flush">
+                            {% for date in stats.get('recent_dates', []) %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ date }}</span>
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewAttendanceForDate('{{ date }}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No attendance records found</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- System Log -->
+        <div class="admin-card">
+            <h4><i class="fas fa-terminal me-2"></i>System Log</h4>
+            <hr>
+            <div id="systemLog" class="log-area">
+                Admin panel loaded successfully...\n
+                Ready for database operations.\n
+                Type 'help' for available commands.\n
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-admin" onclick="clearLog()">
+                    <i class="fas fa-eraser me-2"></i>Clear Log
+                </button>
+                <button class="btn btn-admin" onclick="saveLog()">
+                    <i class="fas fa-save me-2"></i>Save Log
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Logging function
+        function log(message, type = 'info') {
+            const logArea = document.getElementById('systemLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const icons = {
+                'info': 'ℹ️',
+                'success': '✅',
+                'warning': '⚠️',
+                'error': '❌'
+            };
+            logArea.textContent += `[${timestamp}] ${icons[type]} ${message}\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        // Validate data integrity
+        async function validateIntegrity() {
+            log('Validating database integrity...', 'info');
+            try {
+                const response = await fetch('/validate_attendance_integrity');
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`Integrity check passed: ${data.message}`, 'success');
+                    if (data.total_records) {
+                        log(`Total records checked: ${data.total_records}`, 'info');
+                    }
+                } else {
+                    log(`Integrity check failed: ${data.message}`, 'error');
+                    if (data.duplicates) {
+                        log(`Found ${data.duplicates.length} duplicate entries`, 'warning');
+                    }
+                }
+            } catch (error) {
+                log(`Error validating integrity: ${error.message}`, 'error');
+            }
+        }
+
+        // Get database status
+        async function getDbStatus() {
+            log('Checking database status...', 'info');
+            try {
+                const response = await fetch('/database_status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.data;
+                    log(`Database Status:`, 'success');
+                    log(`- Students: ${stats.students}`, 'info');
+                    log(`- Attendance Records: ${stats.attendance_records}`, 'info');
+                    log(`- Unique Dates: ${stats.unique_attendance_dates}`, 'info');
+                    
+                    document.getElementById('dbStatus').textContent = 'Healthy';
+                } else {
+                    log(`Database status check failed: ${data.error}`, 'error');
+                    document.getElementById('dbStatus').textContent = 'Error';
+                }
+            } catch (error) {
+                log(`Error checking database status: ${error.message}`, 'error');
+                document.getElementById('dbStatus').textContent = 'Unknown';
+            }
+        }
+
+        // Clear all attendance
+        async function clearAllAttendance() {
+            if (!confirm('Are you sure you want to clear ALL attendance records?\n\nThis action cannot be undone!')) {
+                return;
+            }
+            
+            log('Clearing all attendance records...', 'warning');
+            try {
+                const response = await fetch('/clear_attendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`${data.message}`, 'success');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    log(`Error clearing attendance: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Error clearing attendance: ${error.message}`, 'error');
+            }
+        }
+
+        // Reset database
+        function resetDatabase() {
+            log('Database reset is not implemented yet', 'warning');
+            log('Use Supabase dashboard for complete reset', 'info');
+        }
+
+        // Export functions
+        function exportAllData() {
+            log('Exporting all data...', 'info');
+            // Implementation for exporting all data
+            log('Export functionality coming soon', 'info');
+        }
+
+        function exportStudents() {
+            log('Exporting students...', 'info');
+            // Implementation for exporting students
+            log('Export functionality coming soon', 'info');
+        }
+
+        // View attendance for specific date
+        function viewAttendanceForDate(date) {
+            log(`Loading attendance for ${date}...`, 'info');
+            window.location.href = `/history?date=${date}`;
+        }
+
+        // Log management
+        function clearLog() {
+            document.getElementById('systemLog').textContent = 'Log cleared.\n';
+        }
+
+        function saveLog() {
+            const logContent = document.getElementById('systemLog').textContent;
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_system_log_${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            log('Log saved to downloads', 'success');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Admin panel initialized', 'success');
+            getDbStatus();
+        });
+    </script>
+</body>
+</html>

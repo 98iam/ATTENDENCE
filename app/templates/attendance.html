@@ -289,16 +289,61 @@
                             </div>
                         </div>
                         
+                        <!-- Date Selection for Attendance -->
+                        <div class="row mb-4">
+                            <div class="col-md-6 mx-auto">
+                                <div class="stat-card">
+                                    <h6 class="mb-3">
+                                        <i class="fas fa-calendar me-2"></i>Select Date for Attendance
+                                    </h6>
+                                    <input type="date" id="attendanceDate" class="form-control mb-3" 
+                                           style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white;"
+                                           value="">
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-4">
+                                            <button class="btn btn-outline-light btn-sm w-100" onclick="setYesterday()">
+                                                <i class="fas fa-arrow-left me-1"></i>Yesterday
+                                            </button>
+                                        </div>
+                                        <div class="col-4">
+                                            <button class="btn btn-light btn-sm w-100" onclick="setToday()">
+                                                <i class="fas fa-calendar-day me-1"></i>Today
+                                            </button>
+                                        </div>
+                                        <div class="col-4">
+                                            <button class="btn btn-outline-light btn-sm w-100" onclick="setTomorrow()">
+                                                <i class="fas fa-arrow-right me-1"></i>Tomorrow
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <small class="text-light opacity-75">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Testing Mode: You can take attendance for any date
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Action Buttons -->
                         <div class="row mb-4">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-3 mb-3">
                                 <button class="btn btn-custom w-100 py-3" onclick="startAttendance()">
                                     <i class="fas fa-play me-2"></i>Start Attendance
                                 </button>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-3 mb-3">
                                 <button class="btn btn-outline-primary w-100 py-3" onclick="showResults()">
                                     <i class="fas fa-chart-bar me-2"></i>View Results
+                                </button>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-outline-secondary w-100 py-3" onclick="goToHistory()">
+                                    <i class="fas fa-history me-2"></i>Attendance History
+                                </button>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-outline-info w-100 py-3" onclick="goToAdmin()">
+                                    <i class="fas fa-cog me-2"></i>Admin Panel
                                 </button>
                             </div>
                         </div>
@@ -321,11 +366,22 @@
             <div class="container">
                 <div class="row justify-content-center">
                     <div class="col-md-6">
+                        <!-- Selected Date Display -->
+                        <div class="text-center mb-3">
+                            <div class="badge bg-primary fs-6 px-3 py-2">
+                                <i class="fas fa-calendar me-2"></i>
+                                <span id="selectedDateDisplay">Today</span>
+                            </div>
+                        </div>
+
                         <!-- Progress -->
                         <div class="mb-4">
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Progress</span>
                                 <span id="progressText">0/{{ students|length }}</span>
+                                <span id="processingIndicator" style="display: none;" class="text-warning">
+                                    <i class="fas fa-spinner fa-spin"></i> Processing...
+                                </span>
                             </div>
                             <div class="bg-light rounded" style="height: 8px;">
                                 <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
@@ -427,10 +483,14 @@
         let attendanceData = {};
         let touchStartY = 0;
         let isDragging = false;
+        let selectedAttendanceDate = null;
+        let isProcessingAttendance = false; // Prevent rapid keypresses
+        let keyPressThrottleTimeout = null;
 
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
             updateTodayDate();
+            setToday(); // Set today as default date
             resetAttendanceData();
         });
 
@@ -444,6 +504,39 @@
             };
             document.getElementById('todayDate').textContent = today.toLocaleDateString('en-US', options);
         }
+
+        function setToday() {
+            const today = new Date();
+            const dateString = today.toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = dateString;
+            selectedAttendanceDate = dateString;
+        }
+
+        function setYesterday() {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const dateString = yesterday.toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = dateString;
+            selectedAttendanceDate = dateString;
+        }
+
+        function setTomorrow() {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dateString = tomorrow.toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = dateString;
+            selectedAttendanceDate = dateString;
+        }
+
+        function updateSelectedDate() {
+            const dateInput = document.getElementById('attendanceDate');
+            selectedAttendanceDate = dateInput.value;
+        }
+
+        // Listen for date input changes
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('attendanceDate').addEventListener('change', updateSelectedDate);
+        });
 
         function resetAttendanceData() {
             attendanceData = {};
@@ -465,6 +558,23 @@
         }
 
         function startAttendance() {
+            // Validate date selection
+            if (!selectedAttendanceDate) {
+                alert('Please select a date for attendance');
+                return;
+            }
+
+            // Update display with selected date
+            const dateObj = new Date(selectedAttendanceDate);
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('selectedDateDisplay').textContent = 
+                dateObj.toLocaleDateString('en-US', options);
+
             currentStudentIndex = 0;
             resetAttendanceData();
             showPage('attendanceMode');
@@ -618,10 +728,18 @@
         }
 
         function markAttendance(rollNumber, status) {
+            // Prevent duplicate marking
+            if (isProcessingAttendance) {
+                console.log('Already processing attendance, skipping...');
+                return;
+            }
+            
+            isProcessingAttendance = true;
+            document.getElementById('processingIndicator').style.display = 'inline';
             attendanceData[rollNumber].status = status;
             updateStats();
             
-            // Send to backend
+            // Send to backend with selected date
             fetch('/mark_attendance', {
                 method: 'POST',
                 headers: {
@@ -630,12 +748,35 @@
                 body: JSON.stringify({
                     roll_number: rollNumber,
                     status: status,
-                    date: new Date().toISOString().split('T')[0]
+                    date: selectedAttendanceDate || new Date().toISOString().split('T')[0]
                 })
-            }).catch(error => console.error('Error:', error));
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(`✅ Attendance marked: ${rollNumber} - ${status}`);
+                } else {
+                    console.error('❌ Error marking attendance:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Network error:', error);
+            })
+            .finally(() => {
+                // Hide processing indicator and allow next operation
+                document.getElementById('processingIndicator').style.display = 'none';
+                setTimeout(() => {
+                    isProcessingAttendance = false;
+                }, 100);
+            });
         }
 
         function animateCardOut(card, status) {
+            // Prevent rapid animations
+            if (card.classList.contains('animate-out-up') || card.classList.contains('animate-out-down')) {
+                return;
+            }
+            
             card.classList.add(status === 'present' ? 'animate-out-up' : 'animate-out-down');
             
             setTimeout(() => {
@@ -693,6 +834,14 @@
             showPage('dashboard');
         }
 
+        function goToHistory() {
+            window.location.href = '/history';
+        }
+
+        function goToAdmin() {
+            window.location.href = '/admin';
+        }
+
         function startNewAttendance() {
             resetAttendanceData();
             startAttendance();
@@ -713,22 +862,40 @@
             window.URL.revokeObjectURL(url);
         }
 
-        // Keyboard shortcuts
+        // Keyboard shortcuts with throttling
         document.addEventListener('keydown', function(e) {
             if (document.getElementById('attendanceMode').classList.contains('active')) {
-                if (e.key === 'ArrowUp' || e.key === 'p' || e.key === 'P') {
-                    const currentCard = document.querySelector('.student-card-stack.current');
-                    if (currentCard) {
-                        markAttendance(currentCard.dataset.rollNumber, 'present');
-                        animateCardOut(currentCard, 'present');
-                    }
-                } else if (e.key === 'ArrowDown' || e.key === 'a' || e.key === 'A') {
-                    const currentCard = document.querySelector('.student-card-stack.current');
-                    if (currentCard) {
-                        markAttendance(currentCard.dataset.rollNumber, 'absent');
-                        animateCardOut(currentCard, 'absent');
-                    }
+                // Prevent rapid keypresses
+                if (isProcessingAttendance) {
+                    e.preventDefault();
+                    return;
                 }
+                
+                // Clear any existing throttle timeout
+                if (keyPressThrottleTimeout) {
+                    clearTimeout(keyPressThrottleTimeout);
+                }
+                
+                // Throttle keypress events
+                keyPressThrottleTimeout = setTimeout(() => {
+                    const currentCard = document.querySelector('.student-card-stack.current');
+                    if (!currentCard) return;
+                    
+                    let status = null;
+                    if (e.key === 'ArrowUp' || e.key === 'p' || e.key === 'P') {
+                        status = 'present';
+                        e.preventDefault();
+                    } else if (e.key === 'ArrowDown' || e.key === 'a' || e.key === 'A') {
+                        status = 'absent';
+                        e.preventDefault();
+                    }
+                    
+                    if (status && currentCard) {
+                        console.log(`🎯 Processing ${status} for roll: ${currentCard.dataset.rollNumber}`);
+                        markAttendance(currentCard.dataset.rollNumber, status);
+                        animateCardOut(currentCard, status);
+                    }
+                }, 50); // 50ms throttle
             }
         });
     </script>

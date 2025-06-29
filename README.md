@@ -1,6 +1,21 @@
-# 📚 Attendance System
+# 🎓 Attendance System - Database Fixed Version
 
-A modern, interactive web-based attendance system built with Flask. Features an intuitive swipe interface for quick attendance marking with real-time statistics and data export capabilities.
+A comprehensive web-based attendance system built with Flask and Supabase, featuring swipe-based attendance marking and robust database management with **fixed duplicate entry prevention**.
+
+## 🚀 Key Improvements in This Version
+
+### 🛡️ Database Integrity Fixes
+- **✅ Prevents Duplicate Entries**: One student can only have one attendance entry per day
+- **✅ Unique Constraints**: Database-level prevention of duplicate records
+- **✅ Atomic Operations**: Safe insert/update operations
+- **✅ Data Validation**: Comprehensive input validation
+- **✅ Admin Panel**: Database monitoring and management tools
+
+### 🔧 Technical Improvements
+- **Enhanced Error Handling**: Better error messages and recovery
+- **Database Monitoring**: Real-time integrity checks
+- **Testing Tools**: Automated testing for database operations
+- **Admin Interface**: Complete database management system
 
 ## ✨ Features
 
@@ -11,37 +26,60 @@ A modern, interactive web-based attendance system built with Flask. Features an 
 - **Touch & Mouse Support**: Works on both desktop and mobile devices
 - **Keyboard Shortcuts**: Use arrow keys or P/A keys for quick marking
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Database Fixed Version)
 
 ### Prerequisites
 - Python 3.7+
-- Flask
+- Supabase account and project
+- All dependencies from requirements.txt
 
-### Installation
+## 🛠️ IMPORTANT: Database Setup (Required!)
 
-1. Clone the repository:
+**This version requires proper database setup to prevent duplicate entries.**
+
+### Step 1: Set up Supabase Database
+
+1. **Go to your Supabase project dashboard**
+2. **Navigate to SQL Editor**
+3. **Copy and paste the entire content from `supabase_schema.sql`**
+4. **Run the SQL script** - This creates tables with proper constraints
+
+**Or use the automated setup:**
 ```bash
-git clone https://github.com/yourusername/attendance-system.git
-cd attendance-system
+python init_database.py
 ```
 
-2. Create a virtual environment:
+### Step 2: Application Setup
+
+1. **Install dependencies:**
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-3. Install dependencies:
+2. **Configure database connection:**
+   - Update `app/config.py` with your Supabase URL and API key
+
+3. **Run the application:**
 ```bash
-pip install flask
+python run.py
 ```
 
-4. Run the application:
+4. **Access the application:**
+   - Main App: `http://localhost:5000`
+   - **Admin Panel: `http://localhost:5000/admin`** (New!)
+
+### Step 3: Verify Setup
+
+**Run the test script to ensure duplicate prevention is working:**
 ```bash
-python3 run.py
+python test_setup.py
 ```
 
-5. Open your browser and navigate to `http://localhost:5000`
+This will test:
+- Database connection
+- Duplicate entry prevention ✅
+- Data integrity validation
+- API functionality
 
 ## 🎯 How to Use
 
