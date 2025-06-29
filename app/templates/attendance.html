@@ -342,8 +342,8 @@
                                 </button>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <button class="btn btn-outline-info w-100 py-3" onclick="goToAdmin()">
-                                    <i class="fas fa-cog me-2"></i>Admin Panel
+                                <button class="btn btn-outline-info w-100 py-3" onclick="goToDashboard()">
+                                    <i class="fas fa-chart-line me-2"></i>Dashboard
                                 </button>
                             </div>
                         </div>
@@ -840,6 +840,10 @@
 
         function goToAdmin() {
             window.location.href = '/admin';
+        }
+
+        function goToDashboard() {
+            window.location.href = '/dashboard';
         }
 
         function startNewAttendance() {

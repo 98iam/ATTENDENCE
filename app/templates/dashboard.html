@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Attendance System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        .dashboard-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(79, 172, 254, 0.3);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .alert-card {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+        }
+        .alert-critical {
+            background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+            color: white;
+        }
+        .alert-warning {
+            background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%);
+            color: white;
+        }
+        .alert-concern {
+            background: linear-gradient(135deg, #ffeb3b 0%, #ffc107 100%);
+            color: #333;
+        }
+        .btn-dashboard {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 15px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        .btn-dashboard:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        .btn-success-custom {
+            background: linear-gradient(135deg, #2ed573 0%, #7bed9f 100%);
+            border: none;
+            color: white;
+        }
+        .btn-danger-custom {
+            background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+            border: none;
+            color: white;
+        }
+        .btn-warning-custom {
+            background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%);
+            border: none;
+            color: white;
+        }
+        .student-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        .table td {
+            border-color: #e9ecef;
+            padding: 15px;
+        }
+        .nav-pills .nav-link {
+            border-radius: 15px;
+            margin: 0 5px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+        .absence-badge {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 2px;
+        }
+        .modal-content {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px 20px 0 0;
+        }
+        .form-control, .form-select {
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+            padding: 12px 20px;
+            transition: all 0.3s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark mb-4" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 20px;">
+            <div class="container-fluid">
+                <a class="navbar-brand fw-bold" href="/dashboard">
+                    <i class="fas fa-chart-line me-2"></i>Dashboard
+                </a>
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link text-white" href="{{ url_for('attendance') }}">
+                        <i class="fas fa-users me-1"></i>Attendance
+                    </a>
+                    <a class="nav-link text-white" href="{{ url_for('history') }}">
+                        <i class="fas fa-history me-1"></i>History
+                    </a>
+                    <a class="nav-link text-white" href="{{ url_for('admin') }}">
+                        <i class="fas fa-cog me-1"></i>Admin
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <i class="fas fa-users fa-2x mb-3"></i>
+                    <h3 id="totalStudents">{{ stats.get('total_students', 0) }}</h3>
+                    <p>Total Students</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card" style="background: linear-gradient(135deg, #2ed573 0%, #7bed9f 100%);">
+                    <i class="fas fa-check-circle fa-2x mb-3"></i>
+                    <h3 id="totalPresent">{{ stats.get('total_present', 0) }}</h3>
+                    <p>Total Present</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card" style="background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);">
+                    <i class="fas fa-times-circle fa-2x mb-3"></i>
+                    <h3 id="totalAbsent">{{ stats.get('total_absent', 0) }}</h3>
+                    <p>Total Absent</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card" style="background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%);">
+                    <i class="fas fa-percentage fa-2x mb-3"></i>
+                    <h3 id="attendanceRate">{{ stats.get('overall_attendance_rate', 0) }}%</h3>
+                    <p>Attendance Rate</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Tabs -->
+        <div class="dashboard-card">
+            <ul class="nav nav-pills mb-4" id="dashboardTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="overview-tab" data-bs-toggle="pill" data-bs-target="#overview" type="button" role="tab">
+                        <i class="fas fa-chart-bar me-2"></i>Overview
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="students-tab" data-bs-toggle="pill" data-bs-target="#students" type="button" role="tab">
+                        <i class="fas fa-users me-2"></i>Students
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="alerts-tab" data-bs-toggle="pill" data-bs-target="#alerts" type="button" role="tab">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Absence Alerts
+                        <span class="badge bg-danger ms-1" id="alertCount">{{ absent_students|length }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="analytics-tab" data-bs-toggle="pill" data-bs-target="#analytics" type="button" role="tab">
+                        <i class="fas fa-chart-line me-2"></i>Analytics
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="dashboardTabContent">
+                <!-- Overview Tab -->
+                <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5><i class="fas fa-chart-bar me-2"></i>Daily Attendance Overview</h5>
+                            <div class="chart-container">
+                                <canvas id="dailyAttendanceChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h5><i class="fas fa-exclamation-triangle me-2"></i>Recent Alerts</h5>
+                            <div id="recentAlerts">
+                                {% for absent_student in absent_students[:5] %}
+                                <div class="alert alert-{{ absent_student.alert_level }} alert-card">
+                                    <strong>{{ absent_student.student.name }}</strong>
+                                    <br>
+                                    <small>{{ absent_student.consecutive_days }} consecutive absences</small>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Students Tab -->
+                <div class="tab-pane fade" id="students" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5><i class="fas fa-users me-2"></i>Student Management</h5>
+                        <button class="btn btn-success-custom" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                            <i class="fas fa-plus me-2"></i>Add Student
+                        </button>
+                    </div>
+
+                    <div class="student-table">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Roll Number</th>
+                                    <th>Name</th>
+                                    <th>Total Present</th>
+                                    <th>Total Absent</th>
+                                    <th>Attendance Rate</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentsTableBody">
+                                {% for student in students %}
+                                <tr data-student-id="{{ student.id }}">
+                                    <td>{{ student.roll_number }}</td>
+                                    <td>{{ student.name }}</td>
+                                    <td><span class="badge bg-success">0</span></td>
+                                    <td><span class="badge bg-danger">0</span></td>
+                                    <td><span class="badge bg-info">0%</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning-custom me-1" onclick="editStudent({{ student.id }}, '{{ student.roll_number }}', '{{ student.name }}')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-danger-custom" onclick="deleteStudent({{ student.id }}, '{{ student.name }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Alerts Tab -->
+                <div class="tab-pane fade" id="alerts" role="tabpanel">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Students with Consecutive Absences</h5>
+                    <p class="text-muted">Students who haven't attended classes for multiple consecutive days</p>
+
+                    <div id="absentStudentsContainer">
+                        {% for absent_student in absent_students %}
+                        <div class="alert alert-{{ absent_student.alert_level }} alert-card">
+                            <div class="row align-items-center">
+                                <div class="col-md-3">
+                                    <h6 class="mb-1">{{ absent_student.student.name }}</h6>
+                                    <small>{{ absent_student.student.roll_number }}</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>{{ absent_student.consecutive_days }} Days Absent</strong>
+                                    <br>
+                                    <small>
+                                        {% if absent_student.alert_level == 'critical' %}
+                                            <i class="fas fa-exclamation-triangle"></i> Critical
+                                        {% elif absent_student.alert_level == 'warning' %}
+                                            <i class="fas fa-exclamation-circle"></i> Warning
+                                        {% else %}
+                                            <i class="fas fa-info-circle"></i> Concern
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Absent Dates:</strong>
+                                    <br>
+                                    {% for date in absent_student.absence_dates[:3] %}
+                                        <span class="absence-badge" style="background: rgba(255,255,255,0.3);">{{ date }}</span>
+                                    {% endfor %}
+                                    {% if absent_student.absence_dates|length > 3 %}
+                                        <small>... and {{ absent_student.absence_dates|length - 3 }} more</small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-sm btn-light" onclick="contactStudent('{{ absent_student.student.name }}', '{{ absent_student.student.roll_number }}')">
+                                        <i class="fas fa-phone"></i> Contact
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Analytics Tab -->
+                <div class="tab-pane fade" id="analytics" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-pie-chart me-2"></i>Attendance Distribution</h5>
+                            <div class="chart-container">
+                                <canvas id="attendanceDistributionChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-chart-line me-2"></i>Weekly Trends</h5>
+                            <div class="chart-container">
+                                <canvas id="weeklyTrendsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5><i class="fas fa-calendar-alt me-2"></i>Monthly Attendance Pattern</h5>
+                            <div class="chart-container">
+                                <canvas id="monthlyPatternChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div class="modal fade" id="addStudentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add New Student</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addStudentForm">
+                        <div class="mb-3">
+                            <label for="rollNumber" class="form-label">Roll Number</label>
+                            <input type="text" class="form-control" id="rollNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="studentName" class="form-label">Student Name</label>
+                            <input type="text" class="form-control" id="studentName" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success-custom" onclick="addStudent()">Add Student</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div class="modal fade" id="editStudentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Student</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editStudentForm">
+                        <input type="hidden" id="editStudentId">
+                        <div class="mb-3">
+                            <label for="editRollNumber" class="form-label">Roll Number</label>
+                            <input type="text" class="form-control" id="editRollNumber" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editStudentName" class="form-label">Student Name</label>
+                            <input type="text" class="form-control" id="editStudentName" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning-custom" onclick="updateStudent()">Update Student</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let dashboardData = {{ stats|tojson }};
+        let absentStudents = {{ absent_students|tojson }};
+        let charts = {};
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            loadDashboardData();
+        });
+
+        // Initialize all charts
+        function initializeCharts() {
+            initializeDailyAttendanceChart();
+            initializeAttendanceDistributionChart();
+            initializeWeeklyTrendsChart();
+            initializeMonthlyPatternChart();
+        }
+
+        // Daily Attendance Chart
+        function initializeDailyAttendanceChart() {
+            const ctx = document.getElementById('dailyAttendanceChart').getContext('2d');
+            const dailyStats = dashboardData.daily_stats || [];
+            
+            charts.dailyAttendance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dailyStats.map(d => d.date),
+                    datasets: [{
+                        label: 'Present',
+                        data: dailyStats.map(d => d.present),
+                        borderColor: '#2ed573',
+                        backgroundColor: 'rgba(46, 213, 115, 0.1)',
+                        fill: true
+                    }, {
+                        label: 'Absent',
+                        data: dailyStats.map(d => d.absent),
+                        borderColor: '#ff4757',
+                        backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Attendance Distribution Chart
+        function initializeAttendanceDistributionChart() {
+            const ctx = document.getElementById('attendanceDistributionChart').getContext('2d');
+            
+            charts.attendanceDistribution = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Present', 'Absent'],
+                    datasets: [{
+                        data: [dashboardData.total_present || 0, dashboardData.total_absent || 0],
+                        backgroundColor: ['#2ed573', '#ff4757'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        }
+                    }
+                }
+            });
+        }
+
+        // Weekly Trends Chart
+        function initializeWeeklyTrendsChart() {
+            const ctx = document.getElementById('weeklyTrendsChart').getContext('2d');
+            const dailyStats = dashboardData.daily_stats || [];
+            
+            charts.weeklyTrends = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: dailyStats.slice(0, 7).map(d => d.date),
+                    datasets: [{
+                        label: 'Attendance %',
+                        data: dailyStats.slice(0, 7).map(d => d.attendance_percentage),
+                        backgroundColor: '#667eea',
+                        borderRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Monthly Pattern Chart
+        function initializeMonthlyPatternChart() {
+            const ctx = document.getElementById('monthlyPatternChart').getContext('2d');
+            const dailyStats = dashboardData.daily_stats || [];
+            
+            charts.monthlyPattern = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dailyStats.map(d => d.date),
+                    datasets: [{
+                        label: 'Attendance Percentage',
+                        data: dailyStats.map(d => d.attendance_percentage),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load dashboard data
+        function loadDashboardData() {
+            // Refresh data every 30 seconds
+            setInterval(refreshDashboardData, 30000);
+        }
+
+        // Refresh dashboard data
+        async function refreshDashboardData() {
+            try {
+                const response = await fetch('/get_dashboard_data');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateDashboardStats(data.data.stats);
+                    updateAbsentStudents(data.data.absent_students);
+                }
+            } catch (error) {
+                console.error('Error refreshing dashboard data:', error);
+            }
+        }
+
+        // Update dashboard statistics
+        function updateDashboardStats(stats) {
+            document.getElementById('totalStudents').textContent = stats.total_students || 0;
+            document.getElementById('totalPresent').textContent = stats.total_present || 0;
+            document.getElementById('totalAbsent').textContent = stats.total_absent || 0;
+            document.getElementById('attendanceRate').textContent = (stats.overall_attendance_rate || 0) + '%';
+            
+            // Update charts
+            if (charts.dailyAttendance) {
+                charts.dailyAttendance.data.labels = stats.daily_stats.map(d => d.date);
+                charts.dailyAttendance.data.datasets[0].data = stats.daily_stats.map(d => d.present);
+                charts.dailyAttendance.data.datasets[1].data = stats.daily_stats.map(d => d.absent);
+                charts.dailyAttendance.update();
+            }
+        }
+
+        // Student Management Functions
+        async function addStudent() {
+            const rollNumber = document.getElementById('rollNumber').value.trim();
+            const studentName = document.getElementById('studentName').value.trim();
+            
+            if (!rollNumber || !studentName) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/add_student', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        roll_number: rollNumber,
+                        name: studentName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Student added successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error adding student: ' + error.message);
+            }
+        }
+
+        function editStudent(id, rollNumber, name) {
+            document.getElementById('editStudentId').value = id;
+            document.getElementById('editRollNumber').value = rollNumber;
+            document.getElementById('editStudentName').value = name;
+            
+            new bootstrap.Modal(document.getElementById('editStudentModal')).show();
+        }
+
+        async function updateStudent() {
+            const id = document.getElementById('editStudentId').value;
+            const rollNumber = document.getElementById('editRollNumber').value.trim();
+            const studentName = document.getElementById('editStudentName').value.trim();
+            
+            if (!rollNumber || !studentName) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/update_student', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        id: id,
+                        roll_number: rollNumber,
+                        name: studentName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Student updated successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error updating student: ' + error.message);
+            }
+        }
+
+        async function deleteStudent(id, name) {
+            if (!confirm(`Are you sure you want to delete ${name}?\n\nThis will also delete all their attendance records.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/delete_student', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ id: id })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error deleting student: ' + error.message);
+            }
+        }
+
+        function contactStudent(name, rollNumber) {
+            alert(`Contact ${name} (${rollNumber})\n\nThis feature can be extended to:\n- Send SMS/Email notifications\n- Generate parent contact reports\n- Schedule follow-up meetings`);
+        }
+    </script>
+</body>
+</html>

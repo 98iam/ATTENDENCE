@@ -1,13 +1,14 @@
 from app import app, supabase
 from flask import render_template, request, jsonify, redirect, url_for
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import os
+from collections import defaultdict, Counter
 
 @app.route('/')
 @app.route('/index')
 def index():
-    return redirect(url_for('attendance'))
+    return redirect(url_for('dashboard'))
 
 @app.route('/attendance')
 def attendance():
@@ -32,6 +33,37 @@ def history():
         print(f"Error fetching students for history: {e}")
         today = datetime.now().strftime('%Y-%m-%d')
         return render_template('history.html', students=[], today=today)
+
+@app.route('/dashboard')
+def dashboard():
+    """Main dashboard with student management and analytics"""
+    try:
+        # Get all students
+        students_response = supabase.table('students').select('*').execute()
+        students = students_response.data
+        
+        # Get recent attendance data (last 30 days)
+        from datetime import datetime, timedelta
+        thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        attendance_response = supabase.table('attendance').select('*').gte('date', thirty_days_ago).execute()
+        attendance_records = attendance_response.data
+        
+        # Calculate statistics
+        stats = calculate_dashboard_stats(students, attendance_records)
+        
+        # Get consecutive absent students
+        absent_students = get_consecutive_absent_students(students, attendance_records)
+        
+        return render_template('dashboard.html', 
+                             students=students, 
+                             stats=stats, 
+                             absent_students=absent_students)
+    except Exception as e:
+        print(f"Error in dashboard: {e}")
+        return render_template('dashboard.html', 
+                             students=[], 
+                             stats={'error': str(e)}, 
+                             absent_students=[])
 
 @app.route('/admin')
 def admin():
@@ -319,3 +351,198 @@ def validate_attendance_integrity():
     except Exception as e:
         print(f"Error validating attendance integrity: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# Student Management Routes
+@app.route('/update_student', methods=['PUT'])
+def update_student():
+    """Update student information"""
+    try:
+        data = request.get_json()
+        student_id = data.get('id')
+        roll_number = data.get('roll_number')
+        name = data.get('name')
+        
+        if not student_id or not roll_number or not name:
+            return jsonify({'success': False, 'error': 'ID, roll number and name are required'}), 400
+        
+        # Check if roll number already exists for different student
+        existing = supabase.table('students').select('*').eq('roll_number', roll_number).neq('id', student_id).execute()
+        if existing.data:
+            return jsonify({'success': False, 'error': 'Roll number already exists for another student'}), 400
+        
+        # Update student
+        response = supabase.table('students').update({
+            'roll_number': roll_number,
+            'name': name
+        }).eq('id', student_id).execute()
+        
+        return jsonify({'success': True, 'message': 'Student updated successfully'})
+    
+    except Exception as e:
+        print(f"Error updating student: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/delete_student', methods=['DELETE'])
+def delete_student():
+    """Delete student and all their attendance records"""
+    try:
+        data = request.get_json()
+        student_id = data.get('id')
+        
+        if not student_id:
+            return jsonify({'success': False, 'error': 'Student ID is required'}), 400
+        
+        # Get student info first
+        student_response = supabase.table('students').select('*').eq('id', student_id).execute()
+        if not student_response.data:
+            return jsonify({'success': False, 'error': 'Student not found'}), 404
+        
+        student = student_response.data[0]
+        roll_number = student['roll_number']
+        
+        # Delete attendance records first
+        supabase.table('attendance').delete().eq('roll_number', roll_number).execute()
+        
+        # Delete student
+        supabase.table('students').delete().eq('id', student_id).execute()
+        
+        return jsonify({'success': True, 'message': f'Student {student["name"]} and all attendance records deleted successfully'})
+    
+    except Exception as e:
+        print(f"Error deleting student: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/get_dashboard_data')
+def get_dashboard_data():
+    """Get dashboard analytics data"""
+    try:
+        # Get all students
+        students_response = supabase.table('students').select('*').execute()
+        students = students_response.data
+        
+        # Get recent attendance data (last 30 days)
+        thirty_days_ago = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        attendance_response = supabase.table('attendance').select('*').gte('date', thirty_days_ago).execute()
+        attendance_records = attendance_response.data
+        
+        # Calculate statistics
+        stats = calculate_dashboard_stats(students, attendance_records)
+        
+        # Get consecutive absent students
+        absent_students = get_consecutive_absent_students(students, attendance_records)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'stats': stats,
+                'absent_students': absent_students
+            }
+        })
+    
+    except Exception as e:
+        print(f"Error getting dashboard data: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Helper Functions
+def calculate_dashboard_stats(students, attendance_records):
+    """Calculate dashboard statistics"""
+    try:
+        total_students = len(students)
+        
+        # Group attendance by date
+        attendance_by_date = defaultdict(list)
+        for record in attendance_records:
+            attendance_by_date[record['date']].append(record)
+        
+        # Calculate daily statistics
+        daily_stats = []
+        for date, records in attendance_by_date.items():
+            present_count = sum(1 for r in records if r['status'] == 'present')
+            absent_count = sum(1 for r in records if r['status'] == 'absent')
+            total_marked = present_count + absent_count
+            not_marked = total_students - total_marked
+            
+            daily_stats.append({
+                'date': date,
+                'present': present_count,
+                'absent': absent_count,
+                'not_marked': not_marked,
+                'total': total_students,
+                'attendance_percentage': round((present_count / total_students * 100), 2) if total_students > 0 else 0
+            })
+        
+        # Sort by date
+        daily_stats.sort(key=lambda x: x['date'], reverse=True)
+        
+        # Overall statistics
+        total_records = len(attendance_records)
+        total_present = sum(1 for r in attendance_records if r['status'] == 'present')
+        total_absent = sum(1 for r in attendance_records if r['status'] == 'absent')
+        
+        overall_stats = {
+            'total_students': total_students,
+            'total_records': total_records,
+            'total_present': total_present,
+            'total_absent': total_absent,
+            'overall_attendance_rate': round((total_present / total_records * 100), 2) if total_records > 0 else 0,
+            'daily_stats': daily_stats[:14]  # Last 14 days
+        }
+        
+        return overall_stats
+        
+    except Exception as e:
+        print(f"Error calculating dashboard stats: {e}")
+        return {'error': str(e)}
+
+def get_consecutive_absent_students(students, attendance_records):
+    """Get students with consecutive absences"""
+    try:
+        # Create attendance lookup
+        attendance_lookup = defaultdict(dict)
+        for record in attendance_records:
+            attendance_lookup[record['roll_number']][record['date']] = record['status']
+        
+        # Generate date range for last 30 days
+        today = datetime.now()
+        date_range = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(30)]
+        date_range.reverse()  # Oldest to newest
+        
+        absent_students = []
+        
+        for student in students:
+            roll_number = student['roll_number']
+            consecutive_days = 0
+            last_present_date = None
+            absence_dates = []
+            
+            # Check each day from most recent backwards
+            for date in reversed(date_range):
+                status = attendance_lookup[roll_number].get(date)
+                
+                if status == 'absent':
+                    consecutive_days += 1
+                    absence_dates.append(date)
+                elif status == 'present':
+                    last_present_date = date
+                    break
+                # If no record (not marked), we don't count it as consecutive absence
+                # but we note the last present date
+            
+            # Only include students with 2+ consecutive absences
+            if consecutive_days >= 2:
+                absent_students.append({
+                    'student': student,
+                    'consecutive_days': consecutive_days,
+                    'absence_dates': list(reversed(absence_dates)),  # Most recent first
+                    'last_present_date': last_present_date,
+                    'alert_level': 'critical' if consecutive_days >= 5 else 'warning' if consecutive_days >= 3 else 'concern'
+                })
+        
+        # Sort by consecutive days (most concerning first)
+        absent_students.sort(key=lambda x: x['consecutive_days'], reverse=True)
+        
+        return absent_students
+        
+    except Exception as e:
+        print(f"Error getting consecutive absent students: {e}")
+        return []
