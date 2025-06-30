@@ -272,11 +272,21 @@
                                 {% for student in students %}
                                 <tr data-student-id="{{ student.id }}">
                                     <td>{{ student.roll_number }}</td>
-                                    <td>{{ student.name }}</td>
+                                    <td>
+                                        <a href="{{ url_for('student_detail', roll_number=student.roll_number) }}" 
+                                           class="text-decoration-none fw-bold text-primary">
+                                            {{ student.name }}
+                                            <i class="fas fa-external-link-alt ms-1" style="font-size: 12px;"></i>
+                                        </a>
+                                    </td>
                                     <td><span class="badge bg-success">0</span></td>
                                     <td><span class="badge bg-danger">0</span></td>
                                     <td><span class="badge bg-info">0%</span></td>
                                     <td>
+                                        <a href="{{ url_for('student_detail', roll_number=student.roll_number) }}" 
+                                           class="btn btn-sm btn-info me-1" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
                                         <button class="btn btn-sm btn-warning-custom me-1" onclick="editStudent({{ student.id }}, '{{ student.roll_number }}', '{{ student.name }}')">
                                             <i class="fas fa-edit"></i>
                                         </button>

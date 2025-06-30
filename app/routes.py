@@ -316,6 +316,88 @@ def database_status():
         print(f"Error getting database status: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/student/<roll_number>')
+def student_detail(roll_number):
+    """Show detailed attendance history for a specific student"""
+    try:
+        # Get student information
+        student_response = supabase.table('students').select('*').eq('roll_number', roll_number).execute()
+        if not student_response.data:
+            return render_template('error.html', error=f'Student with roll number {roll_number} not found'), 404
+        
+        student = student_response.data[0]
+        
+        # Get all attendance records for this student
+        attendance_response = supabase.table('attendance').select('*').eq('roll_number', roll_number).order('date', desc=True).execute()
+        attendance_records = attendance_response.data
+        
+        # Calculate statistics
+        total_records = len(attendance_records)
+        present_count = sum(1 for record in attendance_records if record['status'] == 'present')
+        absent_count = sum(1 for record in attendance_records if record['status'] == 'absent')
+        attendance_rate = round((present_count / total_records * 100), 2) if total_records > 0 else 0
+        
+        # Group records by month for better visualization
+        from collections import defaultdict
+        import calendar
+        monthly_records = defaultdict(list)
+        
+        for record in attendance_records:
+            # Extract year-month from date
+            date_parts = record['date'].split('-')
+            year, month = date_parts[0], date_parts[1]
+            month_name = calendar.month_name[int(month)]
+            key = f"{month_name} {year}"
+            monthly_records[key].append(record)
+        
+        # Get recent attendance streak (consecutive days)
+        current_streak = calculate_attendance_streak(attendance_records)
+        
+        stats = {
+            'total_records': total_records,
+            'present_count': present_count,
+            'absent_count': absent_count,
+            'attendance_rate': attendance_rate,
+            'current_streak': current_streak
+        }
+        
+        return render_template('student_detail.html', 
+                             student=student, 
+                             attendance_records=attendance_records,
+                             monthly_records=dict(monthly_records),
+                             stats=stats)
+    
+    except Exception as e:
+        print(f"Error in student detail: {e}")
+        return render_template('error.html', error=str(e)), 500
+
+def calculate_attendance_streak(records):
+    """Calculate current attendance streak (consecutive present/absent days)"""
+    if not records:
+        return {'type': 'none', 'count': 0}
+    
+    # Sort by date descending (most recent first)
+    sorted_records = sorted(records, key=lambda x: x['date'], reverse=True)
+    
+    if not sorted_records:
+        return {'type': 'none', 'count': 0}
+    
+    # Get the most recent status
+    current_status = sorted_records[0]['status']
+    streak_count = 0
+    
+    # Count consecutive days with the same status
+    for record in sorted_records:
+        if record['status'] == current_status:
+            streak_count += 1
+        else:
+            break
+    
+    return {
+        'type': current_status,
+        'count': streak_count
+    }
+
 @app.route('/validate_attendance_integrity')
 def validate_attendance_integrity():
     """Validate that there are no duplicate attendance records for same student on same date"""

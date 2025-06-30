@@ -69,7 +69,9 @@ INSERT INTO students (roll_number, name) VALUES
     ('CS007', 'Grace Lee'),
     ('CS008', 'Henry Davis'),
     ('CS009', 'Ivy Chen'),
-    ('CS010', 'Jack Thompson')
+    ('CS010', 'Jack Thompson'),
+    ('CS011', 'Karen White'),
+    ('CS012', 'Leo Martinez')
 ON CONFLICT (roll_number) DO NOTHING;
 
 -- 7. Create a view for attendance summary

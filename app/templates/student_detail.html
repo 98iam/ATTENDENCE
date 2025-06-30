@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ student.name }} - Attendance Details</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+        .detail-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(79, 172, 254, 0.3);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-card.present {
+            background: linear-gradient(135deg, #2ed573 0%, #7bed9f 100%);
+            box-shadow: 0 10px 25px rgba(46, 213, 115, 0.3);
+        }
+        .stat-card.absent {
+            background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+            box-shadow: 0 10px 25px rgba(255, 71, 87, 0.3);
+        }
+        .stat-card.rate {
+            background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%);
+            box-shadow: 0 10px 25px rgba(255, 167, 38, 0.3);
+        }
+        .attendance-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        .table td {
+            border-color: #e9ecef;
+            padding: 15px;
+        }
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .status-present {
+            background: #2ed573;
+            color: white;
+        }
+        .status-absent {
+            background: #ff4757;
+            color: white;
+        }
+        .btn-back {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 15px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-back:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+        .month-section {
+            margin-bottom: 30px;
+        }
+        .month-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 15px 15px 0 0;
+            margin: 0;
+            font-weight: 600;
+        }
+        .streak-card {
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .streak-present {
+            background: linear-gradient(135deg, #2ed573 0%, #7bed9f 100%);
+            color: white;
+        }
+        .streak-absent {
+            background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+            color: white;
+        }
+        .streak-none {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+        .filter-controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-dark mb-4" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 20px;">
+            <div class="container-fluid">
+                <a class="navbar-brand fw-bold" href="/dashboard">
+                    <i class="fas fa-user-graduate me-2"></i>{{ student.name }}
+                </a>
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link text-white" href="{{ url_for('dashboard') }}">
+                        <i class="fas fa-chart-line me-1"></i>Dashboard
+                    </a>
+                    <a class="nav-link text-white" href="{{ url_for('attendance') }}">
+                        <i class="fas fa-users me-1"></i>Attendance
+                    </a>
+                    <a class="nav-link text-white" href="{{ url_for('history') }}">
+                        <i class="fas fa-history me-1"></i>History
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Back Button -->
+        <div class="mb-3">
+            <a href="{{ url_for('dashboard') }}" class="btn-back">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Student Information Card -->
+        <div class="detail-card">
+            <div class="row align-items-center mb-4">
+                <div class="col-md-8">
+                    <h2><i class="fas fa-user-graduate me-3"></i>{{ student.name }}</h2>
+                    <p class="text-muted mb-0">
+                        <strong>Roll Number:</strong> {{ student.roll_number }} | 
+                        <strong>Student ID:</strong> {{ student.id }}
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-outline-primary" onclick="exportStudentData()">
+                        <i class="fas fa-download me-2"></i>Export Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-lg-3 col-md-6">
+                    <div class="stat-card">
+                        <i class="fas fa-calendar-alt fa-2x mb-3"></i>
+                        <h3>{{ stats.total_records }}</h3>
+                        <p>Total Records</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="stat-card present">
+                        <i class="fas fa-check-circle fa-2x mb-3"></i>
+                        <h3>{{ stats.present_count }}</h3>
+                        <p>Days Present</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="stat-card absent">
+                        <i class="fas fa-times-circle fa-2x mb-3"></i>
+                        <h3>{{ stats.absent_count }}</h3>
+                        <p>Days Absent</p>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="stat-card rate">
+                        <i class="fas fa-percentage fa-2x mb-3"></i>
+                        <h3>{{ stats.attendance_rate }}%</h3>
+                        <p>Attendance Rate</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Streak -->
+            {% if stats.current_streak.count > 0 %}
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="streak-card streak-{{ stats.current_streak.type }}">
+                        <h4>
+                            <i class="fas fa-fire me-2"></i>
+                            Current Streak: {{ stats.current_streak.count }} 
+                            {% if stats.current_streak.type == 'present' %}
+                                consecutive present days
+                            {% else %}
+                                consecutive absent days
+                            {% endif %}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Attendance Chart -->
+        <div class="detail-card">
+            <h5><i class="fas fa-chart-line me-2"></i>Attendance Trend</h5>
+            <div class="chart-container">
+                <canvas id="attendanceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="detail-card">
+            <div class="filter-controls">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <label for="monthFilter" class="form-label">Filter by Month:</label>
+                        <select class="form-select" id="monthFilter" onchange="filterByMonth()">
+                            <option value="">All Months</option>
+                            {% for month in monthly_records.keys() %}
+                            <option value="{{ month }}">{{ month }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="statusFilter" class="form-label">Filter by Status:</label>
+                        <select class="form-select" id="statusFilter" onchange="filterByStatus()">
+                            <option value="">All Status</option>
+                            <option value="present">Present Only</option>
+                            <option value="absent">Absent Only</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                            <i class="fas fa-times me-2"></i>Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Records by Month -->
+        {% for month, records in monthly_records.items() %}
+        <div class="detail-card month-section" data-month="{{ month }}">
+            <h5 class="month-header">
+                <i class="fas fa-calendar me-2"></i>{{ month }} 
+                <span class="badge bg-light text-dark ms-2">{{ records|length }} records</span>
+            </h5>
+            <div class="attendance-table">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Day</th>
+                            <th>Status</th>
+                            <th>Time Marked</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr data-status="{{ record.status }}">
+                            <td>{{ record.date }}</td>
+                            <td>
+                                {% set date_obj = record.date | strptime('%Y-%m-%d') %}
+                                {{ date_obj.strftime('%A') }}
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ record.status }}">
+                                    {% if record.status == 'present' %}
+                                        <i class="fas fa-check me-1"></i>Present
+                                    {% else %}
+                                        <i class="fas fa-times me-1"></i>Absent
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if record.timestamp %}
+                                    {{ record.timestamp | format_datetime }}
+                                {% else %}
+                                    Not recorded
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not attendance_records %}
+        <div class="detail-card text-center">
+            <i class="fas fa-calendar-times fa-5x text-muted mb-4"></i>
+            <h4>No Attendance Records Found</h4>
+            <p class="text-muted">This student doesn't have any attendance records yet.</p>
+            <a href="{{ url_for('attendance') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Mark Attendance
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Attendance Chart
+        const ctx = document.getElementById('attendanceChart');
+        if (ctx && {{ attendance_records|length }} > 0) {
+            const attendanceData = {{ attendance_records | tojson }};
+            
+            // Prepare data for chart
+            const labels = attendanceData.map(record => record.date).reverse();
+            const data = attendanceData.map(record => record.status === 'present' ? 1 : 0).reverse();
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Attendance',
+                        data: data,
+                        borderColor: '#2ed573',
+                        backgroundColor: 'rgba(46, 213, 115, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return value === 1 ? 'Present' : 'Absent';
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxTicksLimit: 10
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y === 1 ? 'Present' : 'Absent';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Filter functions
+        function filterByMonth() {
+            const selectedMonth = document.getElementById('monthFilter').value;
+            const monthSections = document.querySelectorAll('.month-section');
+            
+            monthSections.forEach(section => {
+                if (selectedMonth === '' || section.dataset.month === selectedMonth) {
+                    section.style.display = 'block';
+                } else {
+                    section.style.display = 'none';
+                }
+            });
+        }
+
+        function filterByStatus() {
+            const selectedStatus = document.getElementById('statusFilter').value;
+            const allRows = document.querySelectorAll('tbody tr[data-status]');
+            
+            allRows.forEach(row => {
+                if (selectedStatus === '' || row.dataset.status === selectedStatus) {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function clearFilters() {
+            document.getElementById('monthFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            
+            // Show all sections and rows
+            document.querySelectorAll('.month-section').forEach(section => {
+                section.style.display = 'block';
+            });
+            document.querySelectorAll('tbody tr[data-status]').forEach(row => {
+                row.style.display = 'table-row';
+            });
+        }
+
+        function exportStudentData() {
+            const studentData = {
+                student: {{ student | tojson }},
+                stats: {{ stats | tojson }},
+                attendance_records: {{ attendance_records | tojson }}
+            };
+            
+            const dataStr = JSON.stringify(studentData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${studentData.student.roll_number}_attendance_data.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

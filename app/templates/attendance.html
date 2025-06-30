@@ -604,7 +604,12 @@
             
             card.innerHTML = `
                 <div class="roll-number">${student.roll_number}</div>
-                <div class="student-name">${student.name}</div>
+                <div class="student-name">
+                    <a href="/student/${student.roll_number}" class="text-decoration-none text-dark fw-bold" onclick="event.stopPropagation()">
+                        ${student.name}
+                        <i class="fas fa-external-link-alt ms-2" style="font-size: 12px; color: #6c757d;"></i>
+                    </a>
+                </div>
                 <div class="text-muted">
                     <i class="fas fa-hand-paper me-2"></i>Swipe to mark attendance
                 </div>
