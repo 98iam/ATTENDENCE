@@ -361,11 +361,16 @@ def student_detail(roll_number):
             'current_streak': current_streak
         }
         
+        # Fetch student marks
+        marks_response = supabase.table('student_marks').select('*').eq('roll_number', roll_number).order('exam_date', desc=True).order('subject', desc=False).execute()
+        student_marks = marks_response.data if marks_response.data else []
+
         return render_template('student_detail.html', 
                              student=student, 
                              attendance_records=attendance_records,
                              monthly_records=dict(monthly_records),
-                             stats=stats)
+                             stats=stats,
+                             student_marks=student_marks)
     
     except Exception as e:
         print(f"Error in student detail: {e}")
