@@ -680,7 +680,7 @@ def get_student_marks():
         # Organize marks by student roll number for easier access on the frontend
         marks_by_student = defaultdict(list)
         for mark_record in marks_data:
-            marks_by_student[mark_record['student_roll_number']].append(mark_record)
+            marks_by_student[mark_record['roll_number']].append(mark_record)
 
         return jsonify({'success': True, 'data': dict(marks_by_student)})
     except Exception as e:
@@ -694,12 +694,12 @@ def save_student_marks():
         data = request.get_json()
 
         # Basic validation
-        required_fields = ['student_roll_number', 'subject', 'marks']
+        required_fields = ['roll_number', 'subject', 'marks']
         for field in required_fields:
             if field not in data or data[field] is None: # Check for None as well
                 return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
 
-        student_roll_number = data.get('student_roll_number')
+        roll_number = data.get('roll_number')
         subject = data.get('subject')
         marks_value = data.get('marks')
         exam_date = data.get('exam_date') # Optional, can be None
@@ -711,16 +711,20 @@ def save_student_marks():
             return jsonify({'success': False, 'error': 'Marks must be a valid number or empty.'}), 400
 
         # Verify student exists
-        student_check = supabase.table('students').select('roll_number').eq('roll_number', student_roll_number).execute()
+        student_check = supabase.table('students').select('roll_number').eq('roll_number', roll_number).execute()
         if not student_check.data:
-            return jsonify({'success': False, 'error': f'Student with roll number {student_roll_number} does not exist'}), 404
+            return jsonify({'success': False, 'error': f'Student with roll number {roll_number} does not exist'}), 404
 
         # Prepare data for upsert
+        # Get today's date for the required 'date' field
+        today_date = datetime.now().date().isoformat()
+
         mark_record_data = {
-            'student_roll_number': student_roll_number,
+            'roll_number': roll_number,
             'subject': subject,
             'marks': marks_value,
-            'exam_date': exam_date if exam_date else None, # Ensure None if empty string
+            'date': today_date,  # Always use today's date for record creation
+            'exam_date': exam_date if exam_date else None  # Exam date can be null
         }
 
         # Upsert logic: Update if exists, else insert.
@@ -738,7 +742,7 @@ def save_student_marks():
 
         response = supabase.table('student_marks').upsert(
             mark_record_data,
-            on_conflict='student_roll_number,subject,exam_date' # Specify columns for conflict resolution
+            on_conflict='roll_number,subject,exam_date' # Specify columns for conflict resolution
         ).execute()
 
         if response.data:

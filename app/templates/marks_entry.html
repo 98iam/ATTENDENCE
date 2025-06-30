@@ -55,12 +55,45 @@
         }
         .student-marks-row td {
             vertical-align: middle;
+            transition: all 0.3s ease;
         }
         .marks-input {
             max-width: 100px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .marks-input.is-invalid {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
         }
         #alert-container {
             margin-top: 15px;
+        }
+        .alert {
+            animation: slideDown 0.3s ease-out;
+        }
+        .table-success {
+            animation: highlightSuccess 2s ease-out;
+        }
+        @keyframes slideDown {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        @keyframes highlightSuccess {
+            0% {
+                background-color: #d4edda;
+            }
+            50% {
+                background-color: #d4edda;
+            }
+            100% {
+                background-color: transparent;
+            }
         }
     </style>
 </head>
@@ -232,6 +265,10 @@
                 return;
             }
 
+            const saveButton = document.querySelector('button[onclick="saveAllMarks()"]');
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+
             const studentRows = document.querySelectorAll('#studentsMarksTableBody tr.student-marks-row');
             let marksData = [];
             let validationError = false;
@@ -253,9 +290,10 @@
                         }
                         marksInput.classList.remove('is-invalid');
                         marksData.push({
-                            student_roll_number: rollNumber,
+                            roll_number: rollNumber,
                             subject: subject,
                             marks: numericMarks,
+                            date: new Date().toISOString().split('T')[0], // Add today's date in YYYY-MM-DD format
                             exam_date: examDate
                         });
                     } catch (e) {
@@ -267,7 +305,7 @@
                 } else {
                     // If we want to explicitly save "null" for empty fields to clear existing marks:
                      marksData.push({
-                        student_roll_number: rollNumber,
+                        roll_number: rollNumber,
                         subject: subject,
                         marks: null, // Send null to indicate no mark or to clear it
                         exam_date: examDate
@@ -276,11 +314,15 @@
             });
 
             if (validationError) {
+                saveButton.disabled = false;
+                saveButton.innerHTML = '<i class="fas fa-save me-2"></i>Save All Marks';
                 return; // Stop if there was a validation error
             }
 
             if (marksData.length === 0) {
                 showAlert('No marks entered to save.', 'info');
+                saveButton.disabled = false;
+                saveButton.innerHTML = '<i class="fas fa-save me-2"></i>Save All Marks';
                 return;
             }
 
@@ -288,39 +330,66 @@
             let successfulSaves = 0;
             let failedSaves = 0;
 
-            // We need to send each student's marks individually as the API expects one record at a time
-            for (const markEntry of marksData) {
-                try {
-                    const response = await fetch('/save_student_marks', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(markEntry)
-                    });
-                    const result = await response.json();
-                    if (!result.success) {
+            try {
+                // Show saving indicator
+                const loadingAlert = document.createElement('div');
+                loadingAlert.className = 'alert alert-info';
+                loadingAlert.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving marks...';
+                document.getElementById('alert-container').appendChild(loadingAlert);
+
+                // We need to send each student's marks individually as the API expects one record at a time
+                for (const markEntry of marksData) {
+                    try {
+                        const response = await fetch('/save_student_marks', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(markEntry)
+                        });
+                        const result = await response.json();
+                        if (!result.success) {
+                            allSavedSuccessfully = false;
+                            failedSaves++;
+                            console.error(`Failed to save marks for ${markEntry.roll_number}: ${result.error}`);
+                            showAlert(`Failed to save marks for ${markEntry.roll_number}: ${result.error}`, 'danger');
+                        } else {
+                            successfulSaves++;
+                            // Add visual feedback for successful save
+                            const row = document.querySelector(`tr[data-roll-number="${markEntry.student_roll_number}"]`);
+                            if (row) {
+                                row.classList.add('table-success');
+                                setTimeout(() => {
+                                    row.classList.remove('table-success');
+                                }, 2000);
+                            }
+                        }
+                    } catch (error) {
                         allSavedSuccessfully = false;
                         failedSaves++;
-                        console.error(`Failed to save marks for ${markEntry.student_roll_number}: ${result.error}`);
-                    } else {
-                        successfulSaves++;
+                        console.error(`Error saving marks for ${markEntry.roll_number}:`, error);
+                        showAlert(`Network error while saving marks for ${markEntry.roll_number}. Please try again.`, 'danger');
                     }
-                } catch (error) {
-                    allSavedSuccessfully = false;
-                    failedSaves++;
-                    console.error(`Error saving marks for ${markEntry.student_roll_number}:`, error);
                 }
-            }
 
-            if (allSavedSuccessfully && successfulSaves > 0) {
-                showAlert(`${successfulSaves} student(s) marks saved successfully for subject "${subject}"` + (examDate ? ` on "${examDate}"` : '') + ".", 'success');
-            } else if (successfulSaves > 0 && failedSaves > 0) {
-                 showAlert(`${successfulSaves} student(s) marks saved. ${failedSaves} failed. Check console for errors.`, 'warning');
-            } else if (failedSaves > 0) {
-                showAlert(`Failed to save marks for ${failedSaves} student(s). Check console for errors.`, 'danger');
-            } else {
-                 showAlert('No marks were processed or saved.', 'info');
+                // Remove loading indicator
+                loadingAlert.remove();
+
+                if (allSavedSuccessfully && successfulSaves > 0) {
+                    showAlert(`${successfulSaves} student(s) marks saved successfully for subject "${subject}"` + (examDate ? ` on "${examDate}"` : '') + ".", 'success');
+                } else if (successfulSaves > 0 && failedSaves > 0) {
+                     showAlert(`${successfulSaves} student(s) marks saved. ${failedSaves} failed. See above for details.`, 'warning');
+                } else if (failedSaves > 0) {
+                    showAlert(`Failed to save marks for ${failedSaves} student(s). See above for details.`, 'danger');
+                } else {
+                     showAlert('No marks were processed or saved.', 'info');
+                }
+            } catch (error) {
+                console.error('Error in save operation:', error);
+                showAlert('An unexpected error occurred. Please try again.', 'danger');
+            } finally {
+                saveButton.disabled = false;
+                saveButton.innerHTML = '<i class="fas fa-save me-2"></i>Save All Marks';
             }
         }
     </script>
