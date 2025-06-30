@@ -610,14 +610,14 @@ def get_consecutive_absent_students(students, attendance_records):
                 # If no record (not marked), we don't count it as consecutive absence
                 # but we note the last present date
             
-            # Only include students with 2+ consecutive absences
-            if consecutive_days >= 2:
+            # Include students with 1+ consecutive absences
+            if consecutive_days >= 1:
                 absent_students.append({
                     'student': student,
                     'consecutive_days': consecutive_days,
                     'absence_dates': list(reversed(absence_dates)),  # Most recent first
                     'last_present_date': last_present_date,
-                    'alert_level': 'critical' if consecutive_days >= 5 else 'warning' if consecutive_days >= 3 else 'concern'
+                    'alert_level': 'critical' if consecutive_days >= 4 else 'warning' if consecutive_days >= 2 else 'concern'
                 })
         
         # Sort by consecutive days (most concerning first)
