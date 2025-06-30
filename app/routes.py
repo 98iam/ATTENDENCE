@@ -577,51 +577,69 @@ def calculate_dashboard_stats(students, attendance_records):
         return {'error': str(e)}
 
 def get_consecutive_absent_students(students, attendance_records):
-    """Get students with consecutive absences"""
+    """Get students who are currently absent based on their most recent attendance record"""
     try:
-        # Create attendance lookup
-        attendance_lookup = defaultdict(dict)
+        # Create attendance lookup sorted by date
+        student_attendance = defaultdict(list)
         for record in attendance_records:
-            attendance_lookup[record['roll_number']][record['date']] = record['status']
+            student_attendance[record['roll_number']].append({
+                'date': record['date'],
+                'status': record['status']
+            })
         
-        # Generate date range for last 30 days
-        today = datetime.now()
-        date_range = [(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(30)]
-        date_range.reverse()  # Oldest to newest
+        # Sort each student's attendance by date (most recent first)
+        for roll_number in student_attendance:
+            student_attendance[roll_number].sort(key=lambda x: x['date'], reverse=True)
         
         absent_students = []
         
         for student in students:
             roll_number = student['roll_number']
-            consecutive_days = 0
-            last_present_date = None
-            absence_dates = []
+            student_records = student_attendance.get(roll_number, [])
             
-            # Check each day from most recent backwards
-            for date in reversed(date_range):
-                status = attendance_lookup[roll_number].get(date)
+            if not student_records:
+                # Student has no attendance records, skip
+                continue
+            
+            # Get the most recent attendance record
+            most_recent_record = student_records[0]
+            
+            # Only include in absent list if most recent record is 'absent'
+            if most_recent_record['status'] == 'absent':
+                # Count consecutive absent days from most recent backwards
+                consecutive_days = 0
+                absence_dates = []
+                last_present_date = None
                 
-                if status == 'absent':
-                    consecutive_days += 1
-                    absence_dates.append(date)
-                elif status == 'present':
-                    last_present_date = date
-                    break
-                # If no record (not marked), we don't count it as consecutive absence
-                # but we note the last present date
-            
-            # Include students with 1+ consecutive absences
-            if consecutive_days >= 1:
+                # Count consecutive absences from most recent date
+                for record in student_records:
+                    if record['status'] == 'absent':
+                        consecutive_days += 1
+                        absence_dates.append(record['date'])
+                    elif record['status'] == 'present':
+                        last_present_date = record['date']
+                        break
+                    # If there's a gap in records, we stop counting consecutive days
+                
+                # Determine alert level based on consecutive days
+                if consecutive_days >= 5:
+                    alert_level = 'critical'
+                elif consecutive_days >= 3:
+                    alert_level = 'warning'
+                else:
+                    alert_level = 'concern'
+                
                 absent_students.append({
                     'student': student,
                     'consecutive_days': consecutive_days,
-                    'absence_dates': list(reversed(absence_dates)),  # Most recent first
+                    'absence_dates': absence_dates,  # Already in reverse chronological order
                     'last_present_date': last_present_date,
-                    'alert_level': 'critical' if consecutive_days >= 4 else 'warning' if consecutive_days >= 2 else 'concern'
+                    'most_recent_absence_date': most_recent_record['date'],
+                    'alert_level': alert_level
                 })
         
-        # Sort by consecutive days (most concerning first)
-        absent_students.sort(key=lambda x: x['consecutive_days'], reverse=True)
+        # Sort by consecutive days (most concerning first), then by most recent absence date
+        absent_students.sort(key=lambda x: (x['consecutive_days'], x['most_recent_absence_date']), reverse=True)
         
         return absent_students
         
