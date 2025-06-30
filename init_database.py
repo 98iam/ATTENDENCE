@@ -32,6 +32,17 @@ def init_database():
         print("   FOREIGN KEY (roll_number) REFERENCES students(roll_number),")
         print("   UNIQUE(roll_number, date) -- This prevents duplicate entries per day")
         print("   )")
+        print("3. student_marks (")
+        print("   id SERIAL PRIMARY KEY,")
+        print("   student_roll_number TEXT NOT NULL,")
+        print("   subject TEXT NOT NULL,")
+        print("   marks REAL,")
+        print("   exam_date DATE,")
+        print("   created_at TIMESTAMPTZ DEFAULT NOW(),")
+        print("   updated_at TIMESTAMPTZ DEFAULT NOW(),")
+        print("   FOREIGN KEY (student_roll_number) REFERENCES students(roll_number) ON DELETE CASCADE,")
+        print("   UNIQUE(student_roll_number, subject, exam_date)")
+        print("   )")
         print("=" * 50)
         
         return True
@@ -49,6 +60,17 @@ def clear_all_attendance():
         return True
     except Exception as e:
         print(f"❌ Error clearing attendance records: {e}")
+        return False
+
+def clear_all_marks():
+    """Clear all student marks records"""
+    try:
+        print("🧹 Clearing all student marks records...")
+        response = supabase.table('student_marks').delete().neq('id', 0).execute()
+        print(f"✅ Cleared student marks records")
+        return True
+    except Exception as e:
+        print(f"❌ Error clearing student marks records: {e}")
         return False
 
 def setup_sample_students():
@@ -139,24 +161,33 @@ def main():
     # Ask user what they want to do
     print("\nWhat would you like to do?")
     print("1. Clear all attendance records")
-    print("2. Setup sample students")
-    print("3. Test database constraints")
-    print("4. All of the above")
-    print("5. Exit")
+    print("2. Clear all student marks records")
+    print("3. Setup sample students")
+    print("4. Test database constraints (attendance)")
+    # Placeholder for future marks constraint test
+    # print("5. Test database constraints (marks)")
+    print("5. All cleanup & setup (Clear all data, setup samples, test constraints)")
+    print("6. Exit")
     
-    choice = input("\nEnter your choice (1-5): ").strip()
+    choice = input("\nEnter your choice (1-6): ").strip()
     
     if choice == "1":
         clear_all_attendance()
     elif choice == "2":
-        setup_sample_students()
+        clear_all_marks()
     elif choice == "3":
-        test_database_constraints()
+        setup_sample_students()
     elif choice == "4":
+        test_database_constraints()
+    # elif choice == "5": # Placeholder for future marks constraint test
+        # test_marks_constraints()
+    elif choice == "5":
         clear_all_attendance()
+        clear_all_marks()
         setup_sample_students()
         test_database_constraints()
-    elif choice == "5":
+        # test_marks_constraints() # Placeholder
+    elif choice == "6":
         print("👋 Goodbye!")
         return
     else:

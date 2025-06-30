@@ -157,8 +157,38 @@ $$ LANGUAGE plpgsql;
 -- GRANT USAGE ON SEQUENCE students_id_seq TO anon, authenticated;
 -- GRANT USAGE ON SEQUENCE attendance_id_seq TO anon, authenticated;
 
+-- 12. Create Student Marks Table
+CREATE TABLE IF NOT EXISTS student_marks (
+    id SERIAL PRIMARY KEY,
+    student_roll_number TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    marks REAL, -- Using REAL for marks to allow for decimal values
+    exam_date DATE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    FOREIGN KEY (student_roll_number) REFERENCES students(roll_number) ON DELETE CASCADE,
+    UNIQUE(student_roll_number, subject, exam_date) -- Ensure a student has unique marks for a subject on a specific exam_date
+);
+
+-- 13. Create indexes for student_marks table
+CREATE INDEX IF NOT EXISTS idx_student_marks_roll_number ON student_marks(student_roll_number);
+CREATE INDEX IF NOT EXISTS idx_student_marks_subject ON student_marks(subject);
+CREATE INDEX IF NOT EXISTS idx_student_marks_exam_date ON student_marks(exam_date);
+
+-- 14. Create trigger for student_marks updated_at
+DROP TRIGGER IF EXISTS update_student_marks_updated_at ON student_marks;
+CREATE TRIGGER update_student_marks_updated_at
+    BEFORE UPDATE ON student_marks
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Adjust sequence permissions if RLS is used for the new table
+-- GRANT USAGE ON SEQUENCE student_marks_id_seq TO anon, authenticated;
+
 -- Verification queries - run these to check your setup
 -- SELECT * FROM students LIMIT 5;
 -- SELECT * FROM attendance LIMIT 5;
+-- SELECT * FROM student_marks LIMIT 5;
 -- SELECT * FROM get_attendance_stats();
 -- SELECT clean_duplicate_attendance(); -- This will clean any existing duplicates

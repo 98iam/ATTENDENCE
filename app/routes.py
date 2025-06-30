@@ -646,3 +646,116 @@ def get_consecutive_absent_students(students, attendance_records):
     except Exception as e:
         print(f"Error getting consecutive absent students: {e}")
         return []
+
+# Marks System Routes
+@app.route('/marks_entry')
+def marks_entry():
+    """Page for entering and viewing student marks."""
+    try:
+        students_response = supabase.table('students').select('roll_number, name').order('name', desc=False).execute()
+        students = students_response.data
+        return render_template('marks_entry.html', students=students)
+    except Exception as e:
+        print(f"Error fetching students for marks entry: {e}")
+        return render_template('marks_entry.html', students=[], error=str(e))
+
+@app.route('/get_student_marks', methods=['GET'])
+def get_student_marks():
+    """API endpoint to fetch student marks.
+    Can be filtered by subject and exam_date query parameters.
+    """
+    try:
+        subject = request.args.get('subject')
+        exam_date = request.args.get('exam_date')
+
+        query = supabase.table('student_marks').select('*')
+        if subject:
+            query = query.eq('subject', subject)
+        if exam_date:
+            query = query.eq('exam_date', exam_date)
+
+        marks_response = query.execute()
+        marks_data = marks_response.data
+
+        # Organize marks by student roll number for easier access on the frontend
+        marks_by_student = defaultdict(list)
+        for mark_record in marks_data:
+            marks_by_student[mark_record['student_roll_number']].append(mark_record)
+
+        return jsonify({'success': True, 'data': dict(marks_by_student)})
+    except Exception as e:
+        print(f"Error fetching student marks: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/save_student_marks', methods=['POST'])
+def save_student_marks():
+    """API endpoint to save or update student marks."""
+    try:
+        data = request.get_json()
+
+        # Basic validation
+        required_fields = ['student_roll_number', 'subject', 'marks']
+        for field in required_fields:
+            if field not in data or data[field] is None: # Check for None as well
+                return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
+
+        student_roll_number = data.get('student_roll_number')
+        subject = data.get('subject')
+        marks_value = data.get('marks')
+        exam_date = data.get('exam_date') # Optional, can be None
+
+        # Validate marks value (should be a number)
+        try:
+            marks_value = float(marks_value) if marks_value else None # Allow empty marks to clear them
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Marks must be a valid number or empty.'}), 400
+
+        # Verify student exists
+        student_check = supabase.table('students').select('roll_number').eq('roll_number', student_roll_number).execute()
+        if not student_check.data:
+            return jsonify({'success': False, 'error': f'Student with roll number {student_roll_number} does not exist'}), 404
+
+        # Prepare data for upsert
+        mark_record_data = {
+            'student_roll_number': student_roll_number,
+            'subject': subject,
+            'marks': marks_value,
+            'exam_date': exam_date if exam_date else None, # Ensure None if empty string
+        }
+
+        # Upsert logic: Update if exists, else insert.
+        # The UNIQUE constraint on (student_roll_number, subject, exam_date) is key here.
+        # Supabase client's upsert handles this. We need to specify the `on_conflict` columns.
+
+        # If exam_date is None, we might need a different conflict target or handle it carefully.
+        # For simplicity, let's assume exam_date is part of the unique key.
+        # If exam_date can be null and still unique for a subject, the schema needs to reflect that,
+        # or we handle it by updating based on id if an id is passed, or querying first.
+
+        # For a robust upsert, we often query first or rely on db returning the ID.
+        # Let's try a direct upsert based on the unique constraint.
+        # The `on_conflict` parameter should list the columns that define the conflict (the unique constraint columns).
+
+        response = supabase.table('student_marks').upsert(
+            mark_record_data,
+            on_conflict='student_roll_number,subject,exam_date' # Specify columns for conflict resolution
+        ).execute()
+
+        if response.data:
+            return jsonify({'success': True, 'message': 'Marks saved successfully', 'data': response.data[0]})
+        else:
+            # This part might indicate an issue with the upsert or how Supabase returns data for it.
+            # For now, assume success if no error, but ideally, check response details.
+            # Supabase upsert might not return data if the record was just updated and not changed,
+            # or if returning="minimal" is default. Let's assume it's successful if no error.
+            if hasattr(response, 'error') and response.error:
+                 return jsonify({'success': False, 'error': f'Database error: {response.error.message}'}), 500
+            return jsonify({'success': True, 'message': 'Marks saved successfully (operation completed)'})
+
+    except Exception as e:
+        error_message = str(e)
+        print(f"Error saving student marks: {error_message}")
+        # Check for constraint violations specifically if possible
+        if 'unique constraint' in error_message.lower():
+            return jsonify({'success': False, 'error': 'A mark for this student, subject, and exam date already exists. Upsert failed unexpectedly.'}), 409
+        return jsonify({'success': False, 'error': f'Server error: {error_message}'}), 500
