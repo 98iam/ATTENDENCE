@@ -759,7 +759,7 @@ def save_student_marks():
             # or if returning="minimal" is default. Let's assume it's successful if no error.
             if hasattr(response, 'error') and response.error:
                  return jsonify({'success': False, 'error': f'Database error: {response.error.message}'}), 500
-            return jsonify({'success': True, 'message': 'Marks saved successfully (operation completed)'})
+        return jsonify({'success': True, 'message': 'Marks saved successfully (operation completed)', 'data': response.data[0] if response.data else None})
 
     except Exception as e:
         error_message = str(e)
@@ -768,3 +768,119 @@ def save_student_marks():
         if 'unique constraint' in error_message.lower():
             return jsonify({'success': False, 'error': 'A mark for this student, subject, and exam date already exists. Upsert failed unexpectedly.'}), 409
         return jsonify({'success': False, 'error': f'Server error: {error_message}'}), 500
+
+# Route for displaying all student marks with filtering and pagination
+@app.route('/all_marks')
+def all_student_marks_route():
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = 20  # Number of items per page
+
+        # Fetch all students for name lookup
+        students_response = supabase.table('students').select('roll_number, name').execute()
+        students_data = students_response.data
+        student_name_map = {student['roll_number']: student['name'] for student in students_data}
+
+        # Base query for marks
+        query = supabase.table('student_marks').select('*, students(name, roll_number)', count='exact') # Fetch student details directly
+
+        # Get filter parameters from request
+        student_search = request.args.get('student_search', '').strip()
+        subject_search = request.args.get('subject_search', '').strip()
+        exam_date_from = request.args.get('exam_date_from', '').strip()
+        exam_date_to = request.args.get('exam_date_to', '').strip()
+
+        # Apply filters
+        if subject_search:
+            query = query.ilike('subject', f'%{subject_search}%')
+        if exam_date_from:
+            query = query.gte('exam_date', exam_date_from)
+        if exam_date_to:
+            query = query.lte('exam_date', exam_date_to)
+
+        # Student search needs to filter on the related students table
+        if student_search:
+            # This requires a multi-step approach or a more complex query if Supabase Python client supports it directly.
+            # Option 1: Fetch all students matching search, then filter marks by their roll_numbers.
+            # Option 2: Use Supabase RPC if direct filtering on related table is tricky.
+            # For simplicity with current client capabilities, let's try filtering by roll numbers obtained from a separate query.
+            # This is not the most efficient for large datasets but works with current tools.
+
+            # Let's try a text search on student name or roll number directly if possible with Supabase join syntax
+            # The syntax `students!inner(name,roll_number)` suggests we want students where conditions match.
+            # And then filter on `students.name` or `students.roll_number`.
+            # Supabase python client might use `cs` (contains) or `fts` (full-text search) on related tables.
+            # Example: query = query.or_(f"students.name.ilike.%{student_search}%,students.roll_number.ilike.%{student_search}%")
+            # The above `or_` with dot notation for related tables is a guess and might need adjustment based on actual client capabilities.
+            # A simpler approach for now, if direct related table filtering is complex, is to post-filter or pre-filter students.
+            # Given we fetch `students(*)` fields, we can try to filter on those.
+            # This might require `!inner` to ensure students must exist.
+             query = query.or_(f"students.name.ilike.%{student_search}%,students.roll_number.ilike.%{student_search}%", foreign_table="students")
+
+
+        # Default ordering
+        query = query.order('exam_date', desc=True).order('subject').order('roll_number', foreign_table="students")
+
+
+        # Pagination
+        offset = (page - 1) * per_page
+        query = query.range(offset, offset + per_page - 1)
+
+        marks_response = query.execute()
+        marks_records = marks_response.data
+        total_records = marks_response.count if marks_response.count is not None else 0
+
+        # Combine marks with student names
+        enriched_marks_data = []
+        for mark in marks_records:
+            enriched_mark = mark.copy()
+            enriched_mark['student_name'] = student_name_map.get(mark['roll_number'], 'N/A')
+            enriched_marks_data.append(enriched_mark)
+
+        # Basic pagination object (can be replaced with Flask-SQLAlchemy pagination if using SQLAlchemy)
+        class SimplePagination:
+            def __init__(self, page, per_page, total_count):
+                self.page = page
+                self.per_page = per_page
+                self.total_count = total_count
+                self.pages = (total_count + per_page - 1) // per_page if total_count > 0 else 0
+
+            @property
+            def has_prev(self):
+                return self.page > 1
+
+            @property
+            def has_next(self):
+                return self.page < self.pages
+
+            @property
+            def prev_num(self):
+                return self.page - 1 if self.has_prev else None
+
+            @property
+            def next_num(self):
+                return self.page + 1 if self.has_next else None
+
+            def iter_pages(self, left_edge=2, left_current=2, right_current=5, right_edge=2):
+                last = 0
+                for num in range(1, self.pages + 1):
+                    if num <= left_edge or \
+                       (num > self.page - left_current - 1 and \
+                        num < self.page + right_current) or \
+                       num > self.pages - right_edge:
+                        if last + 1 != num:
+                            yield None
+                        yield num
+                        last = num
+
+        pagination = SimplePagination(page, per_page, total_records)
+
+        return render_template('all_student_marks.html',
+                             marks_data=enriched_marks_data,
+                             pagination=pagination,
+                             student_name_map=student_name_map) # Pass map if needed for filters later
+
+    except Exception as e:
+        print(f"Error in all_student_marks_route: {e}")
+        # Optionally, pass an error message to the template
+        return render_template('all_student_marks.html', error=str(e), marks_data=[], pagination=None)
