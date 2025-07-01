@@ -102,17 +102,22 @@
                 <a class="navbar-brand fw-bold text-primary" href="/">
                     <i class="fas fa-cog me-2"></i>Admin Panel
                 </a>
-                <div class="navbar-nav ms-auto">
-                    <a class="nav-link" href="{{ url_for('attendance') }}">
-                        <i class="fas fa-users me-1"></i>Attendance
-                    </a>
-                    <a class="nav-link" href="{{ url_for('history') }}">
-                        <i class="fas fa-history me-1"></i>History
-                    </a>
-                    <a class="nav-link" href="{{ url_for('marks_entry') }}">
-                        <i class="fas fa-marker me-1"></i>Marks Entry
-                    </a>
-                    <a class="nav-link" href="{{ url_for('all_student_marks_route') }}"><i class="fas fa-graduation-cap me-1"></i>All Marks</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbarNav" aria-controls="adminNavbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="adminNavbarNav">
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('attendance') }}">
+                    <i class="fas fa-users me-1"></i>Attendance
+                </a>
+                <a class="nav-link" href="{{ url_for('history') }}">
+                    <i class="fas fa-history me-1"></i>History
+                </a>
+                <a class="nav-link" href="{{ url_for('marks_entry') }}">
+                    <i class="fas fa-marker me-1"></i>Marks Entry
+                </a>
+                <a class="nav-link" href="{{ url_for('all_student_marks_route') }}"><i class="fas fa-graduation-cap me-1"></i>All Marks</a>
+            </div>
                 </div>
             </div>
         </nav>

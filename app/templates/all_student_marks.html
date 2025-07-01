@@ -66,6 +66,24 @@
             background-color: rgba(255, 255, 255, 0.2);
             border-radius: 10px;
         }
+
+        @media (max-width: 767px) {
+            .main-container {
+                padding: 15px;
+            }
+            .filter-section {
+                padding: 15px;
+            }
+            .filter-section .row > div { /* Make filter inputs stack nicely */
+                margin-bottom: 10px;
+            }
+            .filter-section .d-flex.align-items-end { /* Ensure button aligns well when stacked */
+                align-items: stretch !important;
+            }
+             .filter-section .d-flex.align-items-end button {
+                width: 100%;
+            }
+        }
     </style>
 
     <!-- PWA Features -->

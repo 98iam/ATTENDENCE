@@ -82,3 +82,18 @@ button:hover {
 button:active {
     transform: scale(0.95);
 }
+
+/* Media Queries for Responsive Typography */
+@media (max-width: 600px) {
+    header h1 {
+        font-size: 1.8em; /* Reduced font size for smaller screens */
+    }
+
+    main p {
+        font-size: 1em; /* Reduced font size for smaller screens */
+    }
+
+    main {
+        padding: 1em; /* Also adjust padding for smaller screens */
+    }
+}
