@@ -493,8 +493,8 @@
         let touchStartY = 0;
         let isDragging = false;
         let selectedAttendanceDate = null;
-        let isProcessingAttendance = false; // Prevent rapid keypresses
-        let keyPressThrottleTimeout = null;
+        // let isProcessingAttendance = false; // Removed: Global flag causing issues with rapid swipes
+        let keyPressThrottleTimeout = null; // Kept for keyboard, could be reviewed
 
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
@@ -685,8 +685,10 @@
             
             if (Math.abs(deltaY) > 100) {
                 const status = deltaY < 0 ? 'present' : 'absent';
-                markAttendance(card.dataset.rollNumber, status);
+                // Optimistic UI: Start animation immediately
                 animateCardOut(card, status);
+                // Then mark attendance (which includes backend call)
+                markAttendance(card.dataset.rollNumber, status);
             } else {
                 // Snap back
                 card.style.transform = '';
@@ -733,8 +735,10 @@
             
             if (Math.abs(deltaY) > 100) {
                 const status = deltaY < 0 ? 'present' : 'absent';
-                markAttendance(card.dataset.rollNumber, status);
+                // Optimistic UI: Start animation immediately
                 animateCardOut(card, status);
+                // Then mark attendance (which includes backend call)
+                markAttendance(card.dataset.rollNumber, status);
             } else {
                 card.style.transform = '';
                 card.classList.remove('present-swipe', 'absent-swipe');
@@ -742,14 +746,15 @@
         }
 
         function markAttendance(rollNumber, status) {
-            // Prevent duplicate marking
-            if (isProcessingAttendance) {
-                console.log('Already processing attendance, skipping...');
-                return;
-            }
+            // isProcessingAttendance flag is removed to allow rapid processing of distinct swipes.
+            // The UI update is already optimistic.
+
+            // Show processing indicator - this might flash if requests are very fast.
+            // A counter-based approach for the indicator might be better for multiple concurrent requests,
+            // but for now, just showing it if any request starts.
+            const processingIndicator = document.getElementById('processingIndicator');
+            processingIndicator.style.display = 'inline';
             
-            isProcessingAttendance = true;
-            document.getElementById('processingIndicator').style.display = 'inline';
             attendanceData[rollNumber].status = status;
             updateStats();
             
@@ -775,13 +780,13 @@
             })
             .catch(error => {
                 console.error('❌ Network error:', error);
+                // Optionally, implement a mechanism to inform the user about the failed sync for this specific card
             })
             .finally(() => {
-                // Hide processing indicator and allow next operation
-                document.getElementById('processingIndicator').style.display = 'none';
-                setTimeout(() => {
-                    isProcessingAttendance = false;
-                }, 100);
+                // Hide processing indicator.
+                // If multiple requests are in flight, this might hide it while others are still processing.
+                // A counter mechanism would be more robust for the indicator display.
+                processingIndicator.style.display = 'none';
             });
         }
 
@@ -802,7 +807,7 @@
                 } else {
                     generateCards();
                 }
-            }, 400);
+            }, 100); // Reduced from 400ms to make next card appear sooner
         }
 
         function updateProgress() {
@@ -883,11 +888,8 @@
         // Keyboard shortcuts with throttling
         document.addEventListener('keydown', function(e) {
             if (document.getElementById('attendanceMode').classList.contains('active')) {
-                // Prevent rapid keypresses
-                if (isProcessingAttendance) {
-                    e.preventDefault();
-                    return;
-                }
+                // The global isProcessingAttendance check was removed.
+                // The 50ms throttle here is for debouncing rapid key presses themselves.
                 
                 // Clear any existing throttle timeout
                 if (keyPressThrottleTimeout) {
@@ -910,8 +912,10 @@
                     
                     if (status && currentCard) {
                         console.log(`🎯 Processing ${status} for roll: ${currentCard.dataset.rollNumber}`);
-                        markAttendance(currentCard.dataset.rollNumber, status);
+                        // Optimistic UI: Start animation immediately
                         animateCardOut(currentCard, status);
+                        // Then mark attendance (which includes backend call)
+                        markAttendance(currentCard.dataset.rollNumber, status);
                     }
                 }, 50); // 50ms throttle
             }
