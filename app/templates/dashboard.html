@@ -155,6 +155,12 @@
             text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
         }
     </style>
+
+    <!-- PWA Features -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#667eea">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+
 </head>
 <body>
     <div class="container-fluid py-4">
@@ -782,5 +788,18 @@
             alert(`Contact ${name} (${rollNumber})\n\nThis feature can be extended to:\n- Send SMS/Email notifications\n- Generate parent contact reports\n- Schedule follow-up meetings`);
         }
     </script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register("{{ url_for('static', filename='service-worker.js') }}")
+                .then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+        });
+    }
+</script>
 </body>
 </html>
