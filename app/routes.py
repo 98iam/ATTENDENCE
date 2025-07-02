@@ -73,31 +73,7 @@ def dashboard():
                              },
                              absent_students=[])
 
-@app.route('/admin')
-def admin():
-    """Admin page for database management"""
-    try:
-        # Get database statistics
-        students_response = supabase.table('students').select('*').execute()
-        attendance_response = supabase.table('attendance').select('*').execute()
-        
-        # Get unique dates
-        unique_dates = []
-        if attendance_response.data:
-            unique_dates = list(set(record['date'] for record in attendance_response.data))
-            unique_dates.sort(reverse=True)
-        
-        stats = {
-            'total_students': len(students_response.data),
-            'total_attendance_records': len(attendance_response.data),
-            'unique_dates': len(unique_dates),
-            'recent_dates': unique_dates[:10]  # Show last 10 dates
-        }
-        
-        return render_template('admin.html', stats=stats, students=students_response.data)
-    except Exception as e:
-        print(f"Error in admin page: {e}")
-        return render_template('admin.html', stats={'error': str(e)}, students=[])
+
 
 @app.route('/mark_attendance', methods=['POST'])
 def mark_attendance():

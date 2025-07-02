@@ -316,25 +316,15 @@
                                            style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white;"
                                            value="">
                                     <div class="row g-2 mb-3">
-                                        <div class="col-4">
-                                            <button class="btn btn-outline-light btn-sm w-100" onclick="setYesterday()">
-                                                <i class="fas fa-arrow-left me-1"></i>Yesterday
-                                            </button>
-                                        </div>
-                                        <div class="col-4">
+                                        <div class="col-12">
                                             <button class="btn btn-light btn-sm w-100" onclick="setToday()">
                                                 <i class="fas fa-calendar-day me-1"></i>Today
-                                            </button>
-                                        </div>
-                                        <div class="col-4">
-                                            <button class="btn btn-outline-light btn-sm w-100" onclick="setTomorrow()">
-                                                <i class="fas fa-arrow-right me-1"></i>Tomorrow
                                             </button>
                                         </div>
                                     </div>
                                     <small class="text-light opacity-75">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        Testing Mode: You can take attendance for any date
+                                        You can manually select any date to take attendance
                                     </small>
                                 </div>
                             </div>
@@ -347,11 +337,7 @@
                                     <i class="fas fa-play me-2"></i>Start Attendance
                                 </button>
                             </div>
-                            <div class="col-md-3 mb-3">
-                                <button class="btn btn-outline-primary w-100 py-3" onclick="showResults()">
-                                    <i class="fas fa-chart-bar me-2"></i>View Results
-                                </button>
-                            </div>
+
                             <div class="col-md-3 mb-3">
                                 <button class="btn btn-outline-secondary w-100 py-3" onclick="goToHistory()">
                                     <i class="fas fa-history me-2"></i>Attendance History
@@ -528,21 +514,7 @@
             selectedAttendanceDate = dateString;
         }
 
-        function setYesterday() {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const dateString = yesterday.toISOString().split('T')[0];
-            document.getElementById('attendanceDate').value = dateString;
-            selectedAttendanceDate = dateString;
-        }
 
-        function setTomorrow() {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const dateString = tomorrow.toISOString().split('T')[0];
-            document.getElementById('attendanceDate').value = dateString;
-            selectedAttendanceDate = dateString;
-        }
 
         function updateSelectedDate() {
             const dateInput = document.getElementById('attendanceDate');
@@ -864,9 +836,7 @@
             window.location.href = '/history';
         }
 
-        function goToAdmin() {
-            window.location.href = '/admin';
-        }
+
 
         function goToDashboard() {
             window.location.href = '/dashboard';
