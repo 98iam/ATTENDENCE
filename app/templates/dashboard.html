@@ -159,34 +159,34 @@
 {% block main_content %}
     <div class="container-fluid py-4">
         {# The old navbar is removed as it's replaced by the one in base_with_sidebar.html #}
-        <!-- Statistics Cards -->
-        <div class="row mb-4">
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-card">
-                    <i class="fas fa-users fa-2x mb-3"></i>
-                    <h3 id="totalStudents">{{ stats.get('total_students', 0) }}</h3>
-                    <p>Total Students</p>
+        <!-- Statistics Display - New Single Line Layout for Mobile, 2x2 for sm, 4-in-line for md+ -->
+        <div class="row text-center mb-4">
+            <div class="col-6 col-sm-6 col-md-3 mb-3">
+                <div class="single-stat-item p-3 border rounded shadow-sm">
+                    <i class="fas fa-users fa-lg mb-2 text-primary"></i>
+                    <div class="stat-value fs-4 fw-bold" id="totalStudents">{{ stats.get('total_students', 0) }}</div>
+                    <div class="stat-label text-muted small">Total Students</div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-card" style="background: linear-gradient(135deg, #2ed573 0%, #7bed9f 100%);">
-                    <i class="fas fa-check-circle fa-2x mb-3"></i>
-                    <h3 id="totalPresent">{{ stats.get('total_present', 0) }}</h3>
-                    <p>Total Present</p>
+            <div class="col-6 col-sm-6 col-md-3 mb-3">
+                <div class="single-stat-item p-3 border rounded shadow-sm">
+                    <i class="fas fa-check-circle fa-lg mb-2 text-success"></i>
+                    <div class="stat-value fs-4 fw-bold" id="totalPresent">{{ stats.get('total_present', 0) }}</div>
+                    <div class="stat-label text-muted small">Total Present</div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-card" style="background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);">
-                    <i class="fas fa-times-circle fa-2x mb-3"></i>
-                    <h3 id="totalAbsent">{{ stats.get('total_absent', 0) }}</h3>
-                    <p>Total Absent</p>
+            <div class="col-6 col-sm-6 col-md-3 mb-3">
+                <div class="single-stat-item p-3 border rounded shadow-sm">
+                    <i class="fas fa-times-circle fa-lg mb-2 text-danger"></i>
+                    <div class="stat-value fs-4 fw-bold" id="totalAbsent">{{ stats.get('total_absent', 0) }}</div>
+                    <div class="stat-label text-muted small">Total Absent</div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="stat-card" style="background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%);">
-                    <i class="fas fa-percentage fa-2x mb-3"></i>
-                    <h3 id="attendanceRate">{{ stats.get('overall_attendance_rate', 0) }}%</h3>
-                    <p>Attendance Rate</p>
+            <div class="col-6 col-sm-6 col-md-3 mb-3">
+                <div class="single-stat-item p-3 border rounded shadow-sm">
+                    <i class="fas fa-percentage fa-lg mb-2 text-warning"></i>
+                    <div class="stat-value fs-4 fw-bold" id="attendanceRate">{{ stats.get('overall_attendance_rate', 0) }}%</div>
+                    <div class="stat-label text-muted small">Attendance Rate</div>
                 </div>
             </div>
         </div>

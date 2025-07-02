@@ -28,19 +28,13 @@
             line-height: 1.2;
         }
         .single-stat-item .stat-label {
-            font-size: 0.75rem;
+            font-size: 0.75rem; /* Default small size for labels */
         }
-        @media (max-width: 576px) {
-            .single-stat-item {
-                padding: 0.5rem !important;
-            }
-            .single-stat-item .stat-value {
-                font-size: 1.5rem;
-            }
-            .single-stat-item .stat-label {
-                font-size: 0.7rem;
-            }
-        }
+        /* Removed the max-width: 576px media query for .single-stat-item.
+           Responsive padding and font sizes will be handled by Bootstrap classes
+           on a per-template basis (e.g., p-2, p-3, fs-responsive classes)
+           or page-specific media queries if further refinement is needed. */
+
         /* Additional page-specific styles can be added via a block */
         {% block extra_styles %}{% endblock %}
     </style>

@@ -168,37 +168,40 @@
                 </div>
             </div>
 
-            <!-- Statistics Cards -->
-            <div class="row mb-4">
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-card">
-                        <i class="fas fa-calendar-alt fa-2x mb-3"></i>
-                        <h3>{{ stats.total_records }}</h3>
-                        <p>Total Records</p>
+            <!-- Statistics Display - New 2x2 Layout -->
+            <div class="row text-center mb-4">
+                <div class="col-6 col-md-6 mb-3">
+                    <div class="single-stat-item p-3 border rounded shadow-sm">
+                        <i class="fas fa-calendar-alt fa-lg mb-2 text-primary"></i>
+                        <div class="stat-value fs-4 fw-bold">{{ stats.total_records }}</div>
+                        <div class="stat-label text-muted small">Total Records</div>
                     </div>
                 </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-card present">
-                        <i class="fas fa-check-circle fa-2x mb-3"></i>
-                        <h3>{{ stats.present_count }}</h3>
-                        <p>Days Present</p>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-card absent">
-                        <i class="fas fa-times-circle fa-2x mb-3"></i>
-                        <h3>{{ stats.absent_count }}</h3>
-                        <p>Days Absent</p>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="stat-card rate">
-                        <i class="fas fa-percentage fa-2x mb-3"></i>
-                        <h3>{{ stats.attendance_rate }}%</h3>
-                        <p>Attendance Rate</p>
+                <div class="col-6 col-md-6 mb-3">
+                    <div class="single-stat-item p-3 border rounded shadow-sm">
+                        <i class="fas fa-check-circle fa-lg mb-2 text-success"></i>
+                        <div class="stat-value fs-4 fw-bold">{{ stats.present_count }}</div>
+                        <div class="stat-label text-muted small">Days Present</div>
                     </div>
                 </div>
             </div>
+            <div class="row text-center mb-4">
+                <div class="col-6 col-md-6 mb-3">
+                    <div class="single-stat-item p-3 border rounded shadow-sm">
+                        <i class="fas fa-times-circle fa-lg mb-2 text-danger"></i>
+                        <div class="stat-value fs-4 fw-bold">{{ stats.absent_count }}</div>
+                        <div class="stat-label text-muted small">Days Absent</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-6 mb-3">
+                    <div class="single-stat-item p-3 border rounded shadow-sm">
+                        <i class="fas fa-percentage fa-lg mb-2 text-warning"></i>
+                        <div class="stat-value fs-4 fw-bold">{{ stats.attendance_rate }}%</div>
+                        <div class="stat-label text-muted small">Attendance Rate</div>
+                    </div>
+                </div>
+            </div>
+            <!-- End of New Statistics Display -->
 
             <!-- Current Streak -->
             {% if stats.current_streak.count > 0 %}
