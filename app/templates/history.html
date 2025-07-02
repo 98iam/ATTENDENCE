@@ -1,18 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance History</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+{% extends "base_with_sidebar.html" %}
+
+{% block page_title %}Attendance History - Attendance System{% endblock %}
+
+{% block navbar_brand %}
+    <i class="fas fa-history me-2"></i>Attendance History
+{% endblock %}
+
+{% block extra_styles %}
     <style>
-        body {
-            background: #f8f9fa;
-            min-height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
+        /* Styles specific to history.html - original styles from here, minus body */
         .history-card {
             background: white;
             border-radius: 20px;
@@ -161,24 +157,13 @@
             border: 1px solid #dee2e6;
         }
     </style>
+{% endblock %}
 
-    <!-- PWA Features -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#667eea">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
-
-</head>
-<body>
+{% block main_content %}
     <div class="container py-5">
         <div class="row justify-content-center">
             <div class="col-lg-10">
-                <!-- Header -->
-                <div class="text-center mb-5">
-                    <h1 class="fw-bold text-primary">
-                        <i class="fas fa-history me-3"></i>Attendance History
-                    </h1>
-                    <p class="text-muted">View past attendance records by selecting a date</p>
-                </div>
+                {# Header is now part of the top navbar in base_with_sidebar.html or page_title block #}
                 
                 <!-- Date Picker Section -->
                 <div class="date-picker-card">
@@ -490,18 +475,5 @@
             }
         });
     </script>
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register("{{ url_for('static', filename='service-worker.js') }}")
-                .then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                })
-                .catch(err => {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
-        });
-    }
-</script>
-</body>
-</html>
+    {# Bootstrap JS and PWA Service Worker script are now in base_with_sidebar.html #}
+{% endblock %}

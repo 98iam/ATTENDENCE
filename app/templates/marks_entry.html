@@ -1,21 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marks Entry - Attendance System</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- Assuming similar styling to dashboard -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% extends "base_with_sidebar.html" %}
+
+{% block page_title %}Marks Entry - Attendance System{% endblock %}
+
+{% block navbar_brand %}
+    <i class="fas fa-marker me-2"></i>Marks Entry
+{% endblock %}
+
+{% block extra_styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"> {# This seems to be a general stylesheet, ensure it doesn't conflict #}
     <style>
+        /* Styles specific to marks_entry.html - original styles from here, minus body and .main-container bg if base provides it */
+        /* The body background is handled by base_with_sidebar or its body tag.
+           If .main-container's background is meant to be different from the page body, keep it.
+           The base_with_sidebar.html has body { background: #f8f9fa; }
+           This page has body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+           This conflict needs to be resolved. For now, page-specific body style is commented out.
+        */
+        /*
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
-            padding-top: 20px; /* Add some padding at the top */
+            padding-top: 20px;
         }
-        .main-container {
+        */
+        .main-container { /* This class is used for the white card content area */
             background: white;
             border-radius: 20px;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
@@ -105,38 +114,11 @@
             }
         }
     </style>
+{% endblock %}
 
-    <!-- PWA Features -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <meta name="theme-color" content="#667eea">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
-
-</head>
-<body>
-    <div class="container">
-        <!-- Navigation (similar to dashboard) -->
-        <nav class="navbar navbar-expand-lg navbar-dark mb-4" style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 20px;">
-            <div class="container-fluid">
-                <a class="navbar-brand fw-bold" href="{{ url_for('dashboard') }}">
-                    <i class="fas fa-chart-line me-2"></i>Dashboard
-                </a>
-                <div class="navbar-nav ms-auto">
-                    <a class="nav-link text-white" href="{{ url_for('attendance') }}">
-                        <i class="fas fa-users me-1"></i>Attendance
-                    </a>
-                    <a class="nav-link text-white" href="{{ url_for('history') }}">
-                        <i class="fas fa-history me-1"></i>History
-                    </a>
-                     <a class="nav-link text-white active" href="{{ url_for('marks_entry') }}">
-                        <i class="fas fa-marker me-1"></i>Marks Entry
-                    </a>
-                    <a class="nav-link text-white" href="{{ url_for('all_student_marks_route') }}"><i class="fas fa-graduation-cap me-1"></i>All Marks</a>
-                    <a class="nav-link text-white" href="{{ url_for('admin') }}">
-                        <i class="fas fa-cog me-1"></i>Admin
-                    </a>
-                </div>
-            </div>
-        </nav>
+{% block main_content %}
+    <div class="container pt-3"> {/* Added pt-3 for some spacing from top navbar content area */}
+        {# Navigation is now handled by base_with_sidebar.html #}
 
         <div class="main-container">
             <h2 class="mb-4 text-center"><i class="fas fa-marker me-2"></i>Enter Student Marks</h2>
@@ -409,18 +391,4 @@
             }
         }
     </script>
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register("{{ url_for('static', filename='service-worker.js') }}")
-                .then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                })
-                .catch(err => {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
-        });
-    }
-</script>
-</body>
-</html>
+{% endblock %}

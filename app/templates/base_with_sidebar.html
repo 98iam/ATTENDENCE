@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block page_title %}Attendance System{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#667eea"> {# TODO: Make this dynamic or move to a more general PWA setup if needed #}
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}"> {# TODO: Update with actual icon path if different #}
+    <style>
+        body {
+            background: #f8f9fa;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-content {
+            padding-top: 56px; /* Standard navbar height */
+            transition: margin-left .3s; /* For when sidebar might be persistent on desktop */
+        }
+        /* Styles for single-line stats from attendance.html - might need to be global or page-specific */
+        .single-stat-item {
+            background-color: #fff;
+            border-radius: .25rem; /* Bootstrap's default rounded */
+        }
+        .single-stat-item .stat-value {
+            line-height: 1.2;
+        }
+        .single-stat-item .stat-label {
+            font-size: 0.75rem;
+        }
+        @media (max-width: 576px) {
+            .single-stat-item {
+                padding: 0.5rem !important;
+            }
+            .single-stat-item .stat-value {
+                font-size: 1.5rem;
+            }
+            .single-stat-item .stat-label {
+                font-size: 0.7rem;
+            }
+        }
+        /* Additional page-specific styles can be added via a block */
+        {% block extra_styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    <!-- Top Navbar for Sidebar Toggle -->
+    <nav class="navbar navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">{% block navbar_brand %}Attendance System{% endblock %}</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Sidebar Offcanvas -->
+    <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="sidebarMenuLabel">Menu</h5>
+            <button type="button" class="btn-close btn-close-white text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}"><i class="fas fa-chart-line me-2"></i>Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'attendance' %}active{% endif %}" aria-current="page" href="{{ url_for('attendance') }}"><i class="fas fa-users me-2"></i>Attendance</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'history' %}active{% endif %}" href="{{ url_for('history') }}"><i class="fas fa-history me-2"></i>History</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'marks_entry' %}active{% endif %}" href="{{ url_for('marks_entry') }}"><i class="fas fa-marker me-2"></i>Marks Entry</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'all_student_marks' %}active{% endif %}" href="{{ url_for('all_student_marks_route') }}"><i class="fas fa-graduation-cap me-2"></i>All Marks</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'admin' %}active{% endif %}" href="{{ url_for('admin') }}"><i class="fas fa-cog me-2"></i>Admin</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-content">
+        {% block main_content %}
+        <!-- Page specific content will go here -->
+        {% endblock %}
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    {% block extra_scripts %}{% endblock %}
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register("{{ url_for('static', filename='service-worker.js') }}")
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
