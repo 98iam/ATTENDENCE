@@ -456,6 +456,27 @@
         document.addEventListener('DOMContentLoaded', function() {
             initializeCharts();
             loadDashboardData();
+
+            // Add event listeners for tab changes to resize charts
+            document.querySelectorAll('#dashboardTabs button[data-bs-toggle="pill"]').forEach(tabEl => {
+                tabEl.addEventListener('shown.bs.tab', event => {
+                    const targetPaneId = event.target.getAttribute('data-bs-target');
+
+                    // Resize charts in the Analytics tab when it's shown
+                    if (targetPaneId === '#analytics') {
+                        if (charts.attendanceDistribution && typeof charts.attendanceDistribution.resize === 'function') {
+                            charts.attendanceDistribution.resize();
+                        }
+                        if (charts.weeklyTrends && typeof charts.weeklyTrends.resize === 'function') {
+                            charts.weeklyTrends.resize();
+                        }
+                        if (charts.monthlyPattern && typeof charts.monthlyPattern.resize === 'function') {
+                            charts.monthlyPattern.resize();
+                        }
+                    }
+                    // Add similar blocks for other tabs if they contain charts initialized while hidden
+                });
+            });
         });
 
         // Initialize all charts
