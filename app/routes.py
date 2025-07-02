@@ -62,7 +62,15 @@ def dashboard():
         print(f"Error in dashboard: {e}")
         return render_template('dashboard.html', 
                              students=[], 
-                             stats={'error': str(e)}, 
+                             stats={
+                                 'error': f'Failed to load dashboard data: {str(e)}',
+                                 'total_students': 0,
+                                 'total_records': 0,
+                                 'total_present': 0,
+                                 'total_absent': 0,
+                                 'overall_attendance_rate': 0,
+                                 'daily_stats': []
+                             },
                              absent_students=[])
 
 @app.route('/admin')
@@ -534,27 +542,31 @@ def get_dashboard_data():
 def calculate_dashboard_stats(students, attendance_records):
     """Calculate dashboard statistics"""
     try:
-        total_students = len(students)
+        # Ensure inputs are iterables (e.g., empty list if None)
+        safe_students = students if students is not None else []
+        safe_attendance_records = attendance_records if attendance_records is not None else []
+
+        total_students = len(safe_students)
         
         # Group attendance by date
         attendance_by_date = defaultdict(list)
-        for record in attendance_records:
+        for record in safe_attendance_records: # Iterating over safe_attendance_records
             attendance_by_date[record['date']].append(record)
         
         # Calculate daily statistics
         daily_stats = []
-        for date, records in attendance_by_date.items():
-            present_count = sum(1 for r in records if r['status'] == 'present')
-            absent_count = sum(1 for r in records if r['status'] == 'absent')
-            total_marked = present_count + absent_count
-            not_marked = total_students - total_marked
+        for date, date_records in attendance_by_date.items(): # Renamed 'records' to 'date_records' to avoid conflict
+            present_count = sum(1 for r in date_records if r['status'] == 'present')
+            absent_count = sum(1 for r in date_records if r['status'] == 'absent')
+            # total_marked = present_count + absent_count # Not used in overall_stats
+            # not_marked = total_students - total_marked # Not used in overall_stats
             
             daily_stats.append({
                 'date': date,
                 'present': present_count,
                 'absent': absent_count,
-                'not_marked': not_marked,
-                'total': total_students,
+                # 'not_marked': not_marked, # Not strictly needed for charts
+                # 'total': total_students, # Not strictly needed for charts, present/absent are absolute
                 'attendance_percentage': round((present_count / total_students * 100), 2) if total_students > 0 else 0
             })
         
@@ -562,16 +574,18 @@ def calculate_dashboard_stats(students, attendance_records):
         daily_stats.sort(key=lambda x: x['date'], reverse=True)
         
         # Overall statistics
-        total_records = len(attendance_records)
-        total_present = sum(1 for r in attendance_records if r['status'] == 'present')
-        total_absent = sum(1 for r in attendance_records if r['status'] == 'absent')
+        total_records = len(safe_attendance_records)
+        total_present = sum(1 for r in safe_attendance_records if r['status'] == 'present')
+        total_absent = sum(1 for r in safe_attendance_records if r['status'] == 'absent')
+
+        overall_attendance_rate = round((total_present / total_records * 100), 2) if total_records > 0 else 0
         
         overall_stats = {
             'total_students': total_students,
             'total_records': total_records,
             'total_present': total_present,
             'total_absent': total_absent,
-            'overall_attendance_rate': round((total_present / total_records * 100), 2) if total_records > 0 else 0,
+            'overall_attendance_rate': overall_attendance_rate,
             'daily_stats': daily_stats[:14]  # Last 14 days
         }
         
@@ -579,7 +593,16 @@ def calculate_dashboard_stats(students, attendance_records):
         
     except Exception as e:
         print(f"Error calculating dashboard stats: {e}")
-        return {'error': str(e)}
+        # Return a full default structure to prevent JS errors
+        return {
+            'error': f'Error in stats calculation: {str(e)}',
+            'total_students': 0,
+            'total_records': 0,
+            'total_present': 0,
+            'total_absent': 0,
+            'overall_attendance_rate': 0,
+            'daily_stats': []
+        }
 
 def get_consecutive_absent_students(students, attendance_records):
     """Get students who are currently absent based on their most recent attendance record"""

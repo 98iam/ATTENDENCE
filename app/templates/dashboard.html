@@ -489,12 +489,19 @@
 
         // Daily Attendance Chart
         function initializeDailyAttendanceChart() {
-            const ctx = document.getElementById('dailyAttendanceChart').getContext('2d');
-            const dailyStats = dashboardData.daily_stats || [];
+            try {
+                const canvas = document.getElementById('dailyAttendanceChart');
+                if (!canvas) {
+                    console.error('Failed to find canvas: dailyAttendanceChart');
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+                const dailyStats = dashboardData.daily_stats || [];
+                console.log('Initializing dailyAttendanceChart with dailyStats:', JSON.parse(JSON.stringify(dailyStats)));
             
-            charts.dailyAttendance = new Chart(ctx, {
-                type: 'line',
-                data: {
+                charts.dailyAttendance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
                     labels: dailyStats.map(d => d.date),
                     datasets: [{
                         label: 'Present',
@@ -525,15 +532,27 @@
                     }
                 }
             });
+            } catch (error) {
+                console.error('Error initializing dailyAttendanceChart:', error);
+                console.error('Data used for dailyAttendanceChart:', JSON.parse(JSON.stringify(dashboardData.daily_stats || [])));
+            }
         }
 
         // Attendance Distribution Chart
         function initializeAttendanceDistributionChart() {
-            const ctx = document.getElementById('attendanceDistributionChart').getContext('2d');
-            
-            charts.attendanceDistribution = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
+            try {
+                const canvas = document.getElementById('attendanceDistributionChart');
+                if (!canvas) {
+                    console.error('Failed to find canvas: attendanceDistributionChart');
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+                const chartData = [dashboardData.total_present || 0, dashboardData.total_absent || 0];
+                console.log('Initializing attendanceDistributionChart with data:', chartData);
+
+                charts.attendanceDistribution = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
                     labels: ['Present', 'Absent'],
                     datasets: [{
                         data: [dashboardData.total_present || 0, dashboardData.total_absent || 0],
@@ -551,16 +570,27 @@
                     }
                 }
             });
+            } catch (error) {
+                console.error('Error initializing attendanceDistributionChart:', error);
+                console.error('Data used for attendanceDistributionChart:', [dashboardData.total_present || 0, dashboardData.total_absent || 0]);
+            }
         }
 
         // Weekly Trends Chart
         function initializeWeeklyTrendsChart() {
-            const ctx = document.getElementById('weeklyTrendsChart').getContext('2d');
-            const dailyStats = dashboardData.daily_stats || [];
-            
-            charts.weeklyTrends = new Chart(ctx, {
-                type: 'bar',
-                data: {
+            try {
+                const canvas = document.getElementById('weeklyTrendsChart');
+                if (!canvas) {
+                    console.error('Failed to find canvas: weeklyTrendsChart');
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+                const dailyStats = dashboardData.daily_stats || [];
+                console.log('Initializing weeklyTrendsChart with dailyStats (first 7 days):', JSON.parse(JSON.stringify(dailyStats.slice(0, 7))));
+
+                charts.weeklyTrends = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
                     labels: dailyStats.slice(0, 7).map(d => d.date),
                     datasets: [{
                         label: 'Attendance %',
@@ -590,16 +620,27 @@
                     }
                 }
             });
+            } catch (error) {
+                console.error('Error initializing weeklyTrendsChart:', error);
+                console.error('Data used for weeklyTrendsChart:', JSON.parse(JSON.stringify(dashboardData.daily_stats ? dashboardData.daily_stats.slice(0, 7) : [])));
+            }
         }
 
         // Monthly Pattern Chart
         function initializeMonthlyPatternChart() {
-            const ctx = document.getElementById('monthlyPatternChart').getContext('2d');
-            const dailyStats = dashboardData.daily_stats || [];
-            
-            charts.monthlyPattern = new Chart(ctx, {
-                type: 'line',
-                data: {
+            try {
+                const canvas = document.getElementById('monthlyPatternChart');
+                if (!canvas) {
+                    console.error('Failed to find canvas: monthlyPatternChart');
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+                const dailyStats = dashboardData.daily_stats || [];
+                console.log('Initializing monthlyPatternChart with dailyStats:', JSON.parse(JSON.stringify(dailyStats)));
+
+                charts.monthlyPattern = new Chart(ctx, {
+                    type: 'line',
+                    data: {
                     labels: dailyStats.map(d => d.date),
                     datasets: [{
                         label: 'Attendance Percentage',
@@ -631,6 +672,10 @@
                     }
                 }
             });
+            } catch (error) {
+                console.error('Error initializing monthlyPatternChart:', error);
+                console.error('Data used for monthlyPatternChart:', JSON.parse(JSON.stringify(dashboardData.daily_stats || [])));
+            }
         }
 
         // Load dashboard data
