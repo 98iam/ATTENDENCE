@@ -7,7 +7,6 @@
 {% endblock %}
 
 {% block extra_styles %}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> {# Moved Chart.js here as it's specific to this page's styles/scripts setup #}
     <style>
         /* Styles specific to dashboard.html - original styles from here, minus body */
         /* body styling is now handled by base_with_sidebar.html or its own body tag if needed */
@@ -446,6 +445,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         // Global variables
         let dashboardData = {{ stats|tojson }};
