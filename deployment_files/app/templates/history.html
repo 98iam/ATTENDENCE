@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance History</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f8f9fa;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .history-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e9ecef;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .history-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .date-picker-card {
+            background: #212529;
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(33, 37, 41, 0.3);
+        }
+        
+        .student-row {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 8px 0;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border-left: 4px solid #e9ecef;
+        }
+        
+        .student-row:hover {
+            transform: translateX(5px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        }
+        
+        .student-row.present {
+            border-left-color: #28a745;
+            background: linear-gradient(90deg, #f8fff9 0%, #ffffff 100%);
+        }
+        
+        .student-row.absent {
+            border-left-color: #dc3545;
+            background: linear-gradient(90deg, #fff8f8 0%, #ffffff 100%);
+        }
+        
+        .student-row.not-marked {
+            border-left-color: #ffc107;
+            background: linear-gradient(90deg, #fffcf0 0%, #ffffff 100%);
+        }
+        
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .status-present {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-absent {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-not-marked {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .stats-summary {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .stats-summary h3 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .btn-custom {
+            background: #212529;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-custom:hover {
+            background: #495057;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(33, 37, 41, 0.3);
+            color: white;
+        }
+        
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .date-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            color: white;
+            padding: 12px 15px;
+        }
+        
+        .date-input:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.5);
+            color: white;
+            box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+        }
+        
+        .date-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .export-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- Header -->
+                <div class="text-center mb-5">
+                    <h1 class="fw-bold text-primary">
+                        <i class="fas fa-history me-3"></i>Attendance History
+                    </h1>
+                    <p class="text-muted">View past attendance records by selecting a date</p>
+                </div>
+                
+                <!-- Date Picker Section -->
+                <div class="date-picker-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <h5 class="mb-3 mb-md-0">
+                                <i class="fas fa-calendar-alt me-2"></i>Select Date
+                            </h5>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="date" id="attendanceDate" class="form-control date-input" 
+                                   max="{{ today }}" value="{{ today }}">
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-light w-100 mt-3 mt-md-0" onclick="loadAttendanceHistory()">
+                                <i class="fas fa-search me-2"></i>Load Records
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Loading Spinner -->
+                <div class="loading-spinner" id="loadingSpinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Loading attendance records...</p>
+                </div>
+                
+                <!-- Attendance Records Section -->
+                <div id="attendanceSection" style="display: none;">
+                    <div class="history-card p-4">
+                        <!-- Summary Stats -->
+                        <div class="row mb-4" id="summaryStats">
+                            <div class="col-md-4">
+                                <div class="stats-summary">
+                                    <i class="fas fa-users text-primary fa-2x mb-2"></i>
+                                    <h3 id="totalStudents" class="text-primary">0</h3>
+                                    <p class="mb-0">Total Students</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stats-summary">
+                                    <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
+                                    <h3 id="presentCount" class="text-success">0</h3>
+                                    <p class="mb-0">Present</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stats-summary">
+                                    <i class="fas fa-times-circle text-danger fa-2x mb-2"></i>
+                                    <h3 id="absentCount" class="text-danger">0</h3>
+                                    <p class="mb-0">Absent</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Date Header -->
+                        <div class="text-center mb-4">
+                            <h4 class="text-secondary">
+                                <i class="fas fa-calendar me-2"></i>
+                                Attendance for <span id="selectedDateDisplay"></span>
+                            </h4>
+                        </div>
+                        
+                        <!-- Students List -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div id="studentsList"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Export Section -->
+                        <div class="export-section">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-download me-2"></i>Export Options
+                                    </h6>
+                                    <small class="text-muted">Download attendance records for this date</small>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <button class="btn btn-outline-primary" onclick="exportAttendanceHistory()">
+                                        <i class="fas fa-file-csv me-2"></i>Export CSV
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- No Data Message -->
+                <div class="no-data" id="noDataMessage" style="display: none;">
+                    <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Attendance Records Found</h4>
+                    <p class="text-muted">No attendance was taken on the selected date.</p>
+                </div>
+                
+                <!-- Navigation -->
+                <div class="text-center mt-4">
+                    <button class="btn btn-custom me-2" onclick="goToDashboard()">
+                        <i class="fas fa-home me-2"></i>Back to Dashboard
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="loadTodayAttendance()">
+                        <i class="fas fa-calendar-day me-2"></i>Today's Attendance
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Students data from Flask backend
+        const students = {{ students | tojson }};
+        let selectedDate = null;
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            setTodayDate();
+            loadTodayAttendance();
+        });
+        
+        function setTodayDate() {
+            const today = new Date();
+            const dateString = today.toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = dateString;
+        }
+        
+        function loadTodayAttendance() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = today;
+            loadAttendanceHistory();
+        }
+        
+        function loadAttendanceHistory() {
+            const dateInput = document.getElementById('attendanceDate');
+            const selectedDate = dateInput.value;
+            
+            if (!selectedDate) {
+                alert('Please select a date');
+                return;
+            }
+            
+            showLoading(true);
+            hideAllSections();
+            
+            // Fetch attendance data for the selected date
+            fetch(`/get_attendance/${selectedDate}`)
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(false);
+                    if (data.success) {
+                        displayAttendanceData(data.data, selectedDate);
+                    } else {
+                        showNoData();
+                        console.error('Error:', data.error);
+                    }
+                })
+                .catch(error => {
+                    showLoading(false);
+                    showNoData();
+                    console.error('Error fetching attendance:', error);
+                });
+        }
+        
+        function displayAttendanceData(attendanceData, date) {
+            const hasData = Object.keys(attendanceData).length > 0;
+            
+            if (!hasData) {
+                showNoData();
+                return;
+            }
+            
+            // Update date display
+            const dateObj = new Date(date);
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('selectedDateDisplay').textContent = dateObj.toLocaleDateString('en-US', options);
+            
+            // Calculate statistics
+            let presentCount = 0;
+            let absentCount = 0;
+            let totalStudents = students.length;
+            
+            Object.values(attendanceData).forEach(record => {
+                if (record.status === 'present') presentCount++;
+                else if (record.status === 'absent') absentCount++;
+            });
+            
+            // Update stats
+            document.getElementById('totalStudents').textContent = totalStudents;
+            document.getElementById('presentCount').textContent = presentCount;
+            document.getElementById('absentCount').textContent = absentCount;
+            
+            // Generate student list
+            const studentsList = document.getElementById('studentsList');
+            studentsList.innerHTML = '';
+            
+            students.forEach(student => {
+                const record = attendanceData[student.roll_number];
+                const status = record ? record.status : 'not_marked';
+                const timestamp = record ? new Date(record.timestamp).toLocaleTimeString() : '';
+                
+                const studentRow = document.createElement('div');
+                studentRow.className = `student-row ${status.replace('_', '-')}`;
+                
+                studentRow.innerHTML = `
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            <strong class="text-primary">${student.roll_number}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <span class="fw-semibold">${student.name}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="status-badge status-${status.replace('_', '-')}">
+                                <i class="fas ${getStatusIcon(status)} me-1"></i>
+                                ${getStatusText(status)}
+                            </span>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <small class="text-muted">
+                                ${timestamp ? `<i class="fas fa-clock me-1"></i>${timestamp}` : ''}
+                            </small>
+                        </div>
+                    </div>
+                `;
+                
+                studentsList.appendChild(studentRow);
+            });
+            
+            document.getElementById('attendanceSection').style.display = 'block';
+        }
+        
+        function getStatusIcon(status) {
+            switch(status) {
+                case 'present': return 'fa-check-circle';
+                case 'absent': return 'fa-times-circle';
+                default: return 'fa-question-circle';
+            }
+        }
+        
+        function getStatusText(status) {
+            switch(status) {
+                case 'present': return 'Present';
+                case 'absent': return 'Absent';
+                default: return 'Not Marked';
+            }
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loadingSpinner').style.display = show ? 'block' : 'none';
+        }
+        
+        function showNoData() {
+            document.getElementById('noDataMessage').style.display = 'block';
+        }
+        
+        function hideAllSections() {
+            document.getElementById('attendanceSection').style.display = 'none';
+            document.getElementById('noDataMessage').style.display = 'none';
+        }
+        
+        function exportAttendanceHistory() {
+            const dateInput = document.getElementById('attendanceDate');
+            const selectedDate = dateInput.value;
+            
+            if (!selectedDate) {
+                alert('Please select a date first');
+                return;
+            }
+            
+            fetch(`/export_attendance/${selectedDate}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Convert to CSV and download
+                        const csv = data.data.map(row => row.join(',')).join('\n');
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `attendance_${selectedDate}.csv`;
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    } else {
+                        alert('Error exporting data: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error exporting attendance:', error);
+                    alert('Error exporting attendance data');
+                });
+        }
+        
+        function goToDashboard() {
+            window.location.href = '/attendance';
+        }
+        
+        // Allow Enter key to load attendance
+        document.getElementById('attendanceDate').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadAttendanceHistory();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f8f9fa;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .dashboard-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e9ecef;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stat-card {
+            background: #212529;
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(33, 37, 41, 0.3);
+        }
+        
+        .student-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+            touch-action: pan-y;
+        }
+        
+        .student-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+        
+        .student-card.dragging {
+            transform: scale(1.05);
+            z-index: 1000;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .student-card.present {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        
+        .student-card.absent {
+            background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
+            color: white;
+        }
+        
+        .swipe-hint {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+        
+        .swipe-hint.left {
+            left: 10px;
+        }
+        
+        .swipe-hint.right {
+            right: 10px;
+        }
+        
+        .attendance-mode {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+        
+        .cards-container {
+            position: relative;
+            width: 350px;
+            height: 450px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .student-card-stack {
+            position: absolute;
+            width: 300px;
+            height: 400px;
+            border-radius: 25px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            cursor: grab;
+            user-select: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: white;
+            border: 2px solid #e9ecef;
+        }
+        
+        .student-card-stack:active {
+            cursor: grabbing;
+        }
+        
+        .student-card-stack.current {
+            z-index: 100;
+            transform: scale(1) rotate(0deg);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+        }
+        
+        .student-card-stack.next {
+            z-index: 90;
+            transform: scale(0.95) translateX(20px) rotate(2deg);
+            opacity: 0.8;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .student-card-stack.prev {
+            z-index: 80;
+            transform: scale(0.9) translateX(-20px) rotate(-2deg);
+            opacity: 0.6;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .student-card-stack.animate-out-up {
+            transform: translateY(-150vh) rotate(15deg) scale(0.8);
+            opacity: 0;
+            z-index: 200;
+        }
+        
+        .student-card-stack.animate-out-down {
+            transform: translateY(150vh) rotate(-15deg) scale(0.8);
+            opacity: 0;
+            z-index: 200;
+        }
+        
+        .student-card-stack.animate-in {
+            transform: scale(0.8) translateX(100px) rotate(5deg);
+            opacity: 0;
+        }
+        
+        .student-card-stack.present-swipe {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-color: #28a745;
+            color: #155724;
+        }
+        
+        .student-card-stack.absent-swipe {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .roll-number {
+            font-size: 4rem;
+            font-weight: 900;
+            color: #212529;
+            margin-bottom: 20px;
+            letter-spacing: -2px;
+        }
+        
+        .student-name {
+            font-size: 1.8rem;
+            color: #495057;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        
+        .swipe-instructions {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .btn-custom {
+            background: #212529;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-custom:hover {
+            background: #495057;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(33, 37, 41, 0.3);
+            color: white;
+        }
+        
+        .results-summary {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        .progress-bar {
+            background: #212529;
+            height: 8px;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .current-student {
+                min-width: 280px;
+                padding: 30px 20px;
+            }
+            
+            .roll-number {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Dashboard Page -->
+    <div id="dashboard" class="page active">
+        <div class="container py-5">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="dashboard-card p-4">
+                        <div class="text-center mb-5">
+                            <h1 class="fw-bold text-primary">
+                                <i class="fas fa-users me-3"></i>Attendance System
+                            </h1>
+                            <p class="text-muted">Manage student attendance with ease</p>
+                        </div>
+                        
+                        <!-- Stats Row -->
+                        <div class="row mb-5">
+                            <div class="col-md-4">
+                                <div class="stat-card text-center">
+                                    <i class="fas fa-users fa-2x mb-3"></i>
+                                    <h3 id="totalStudents">{{ students|length }}</h3>
+                                    <p>Total Students</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card text-center">
+                                    <i class="fas fa-check-circle fa-2x mb-3"></i>
+                                    <h3 id="presentCount">0</h3>
+                                    <p>Present Today</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card text-center">
+                                    <i class="fas fa-times-circle fa-2x mb-3"></i>
+                                    <h3 id="absentCount">0</h3>
+                                    <p>Absent Today</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Date Selection for Attendance -->
+                        <div class="row mb-4">
+                            <div class="col-md-6 mx-auto">
+                                <div class="stat-card">
+                                    <h6 class="mb-3">
+                                        <i class="fas fa-calendar me-2"></i>Select Date for Attendance
+                                    </h6>
+                                    <input type="date" id="attendanceDate" class="form-control mb-3" 
+                                           style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white;"
+                                           value="">
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-4">
+                                            <button class="btn btn-outline-light btn-sm w-100" onclick="setYesterday()">
+                                                <i class="fas fa-arrow-left me-1"></i>Yesterday
+                                            </button>
+                                        </div>
+                                        <div class="col-4">
+                                            <button class="btn btn-light btn-sm w-100" onclick="setToday()">
+                                                <i class="fas fa-calendar-day me-1"></i>Today
+                                            </button>
+                                        </div>
+                                        <div class="col-4">
+                                            <button class="btn btn-outline-light btn-sm w-100" onclick="setTomorrow()">
+                                                <i class="fas fa-arrow-right me-1"></i>Tomorrow
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <small class="text-light opacity-75">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Testing Mode: You can take attendance for any date
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="row mb-4">
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-custom w-100 py-3" onclick="startAttendance()">
+                                    <i class="fas fa-play me-2"></i>Start Attendance
+                                </button>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-outline-primary w-100 py-3" onclick="showResults()">
+                                    <i class="fas fa-chart-bar me-2"></i>View Results
+                                </button>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-outline-secondary w-100 py-3" onclick="goToHistory()">
+                                    <i class="fas fa-history me-2"></i>Attendance History
+                                </button>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-outline-info w-100 py-3" onclick="goToDashboard()">
+                                    <i class="fas fa-chart-line me-2"></i>Dashboard
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Today's Date -->
+                        <div class="text-center">
+                            <p class="text-muted">
+                                <i class="fas fa-calendar me-2"></i>Today: <span id="todayDate"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Attendance Mode Page -->
+    <div id="attendanceMode" class="page">
+        <div class="attendance-mode">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <!-- Selected Date Display -->
+                        <div class="text-center mb-3">
+                            <div class="badge bg-primary fs-6 px-3 py-2">
+                                <i class="fas fa-calendar me-2"></i>
+                                <span id="selectedDateDisplay">Today</span>
+                            </div>
+                        </div>
+
+                        <!-- Progress -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Progress</span>
+                                <span id="progressText">0/{{ students|length }}</span>
+                                <span id="processingIndicator" style="display: none;" class="text-warning">
+                                    <i class="fas fa-spinner fa-spin"></i> Processing...
+                                </span>
+                            </div>
+                            <div class="bg-light rounded" style="height: 8px;">
+                                <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Current Student Cards Stack -->
+                        <div class="cards-container" id="cardsContainer">
+                            <!-- Cards will be dynamically generated here -->
+                        </div>
+                        
+                        <!-- Instructions -->
+                        <div class="swipe-instructions mt-4">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <i class="fas fa-arrow-up text-success fa-2x mb-2"></i>
+                                    <p class="mb-0 text-success"><strong>Swipe Up</strong><br>Present</p>
+                                </div>
+                                <div class="col-6">
+                                    <i class="fas fa-arrow-down text-danger fa-2x mb-2"></i>
+                                    <p class="mb-0 text-danger"><strong>Swipe Down</strong><br>Absent</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Controls -->
+                        <div class="text-center mt-4">
+                            <button class="btn btn-outline-secondary me-2" onclick="goToDashboard()">
+                                <i class="fas fa-home"></i> Dashboard
+                            </button>
+                            <button class="btn btn-outline-primary" onclick="finishAttendance()">
+                                <i class="fas fa-flag-checkered"></i> Finish
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results Page -->
+    <div id="results" class="page">
+        <div class="container py-5">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="dashboard-card p-4">
+                        <div class="text-center mb-4">
+                            <h2 class="fw-bold text-primary">
+                                <i class="fas fa-chart-pie me-3"></i>Attendance Results
+                            </h2>
+                            <p class="text-muted">Today's attendance summary</p>
+                        </div>
+                        
+                        <!-- Summary Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="results-summary text-center">
+                                    <h3 class="text-success mb-3">
+                                        <i class="fas fa-check-circle me-2"></i>Present
+                                    </h3>
+                                    <h2 id="finalPresentCount" class="text-success mb-3">0</h2>
+                                    <div id="presentList"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="results-summary text-center">
+                                    <h3 class="text-danger mb-3">
+                                        <i class="fas fa-times-circle me-2"></i>Absent
+                                    </h3>
+                                    <h2 id="finalAbsentCount" class="text-danger mb-3">0</h2>
+                                    <div id="absentList"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="text-center">
+                            <button class="btn btn-custom me-2" onclick="goToDashboard()">
+                                <i class="fas fa-home me-2"></i>Back to Dashboard
+                            </button>
+                            <button class="btn btn-outline-primary me-2" onclick="exportData()">
+                                <i class="fas fa-download me-2"></i>Export CSV
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="startNewAttendance()">
+                                <i class="fas fa-redo me-2"></i>Start New
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Student data from Flask backend
+        const students = {{ students | tojson }};
+        let currentStudentIndex = 0;
+        let attendanceData = {};
+        let touchStartY = 0;
+        let isDragging = false;
+        let selectedAttendanceDate = null;
+        let isProcessingAttendance = false; // Prevent rapid keypresses
+        let keyPressThrottleTimeout = null;
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTodayDate();
+            setToday(); // Set today as default date
+            resetAttendanceData();
+        });
+
+        function updateTodayDate() {
+            const today = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('todayDate').textContent = today.toLocaleDateString('en-US', options);
+        }
+
+        function setToday() {
+            const today = new Date();
+            const dateString = today.toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = dateString;
+            selectedAttendanceDate = dateString;
+        }
+
+        function setYesterday() {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const dateString = yesterday.toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = dateString;
+            selectedAttendanceDate = dateString;
+        }
+
+        function setTomorrow() {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const dateString = tomorrow.toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = dateString;
+            selectedAttendanceDate = dateString;
+        }
+
+        function updateSelectedDate() {
+            const dateInput = document.getElementById('attendanceDate');
+            selectedAttendanceDate = dateInput.value;
+        }
+
+        // Listen for date input changes
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('attendanceDate').addEventListener('change', updateSelectedDate);
+        });
+
+        function resetAttendanceData() {
+            attendanceData = {};
+            students.forEach(student => {
+                attendanceData[student.roll_number] = {
+                    name: student.name,
+                    status: null
+                };
+            });
+            updateStats();
+        }
+
+        function updateStats() {
+            const present = Object.values(attendanceData).filter(s => s.status === 'present').length;
+            const absent = Object.values(attendanceData).filter(s => s.status === 'absent').length;
+            
+            document.getElementById('presentCount').textContent = present;
+            document.getElementById('absentCount').textContent = absent;
+        }
+
+        function startAttendance() {
+            // Validate date selection
+            if (!selectedAttendanceDate) {
+                alert('Please select a date for attendance');
+                return;
+            }
+
+            // Update display with selected date
+            const dateObj = new Date(selectedAttendanceDate);
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            document.getElementById('selectedDateDisplay').textContent = 
+                dateObj.toLocaleDateString('en-US', options);
+
+            currentStudentIndex = 0;
+            resetAttendanceData();
+            showPage('attendanceMode');
+            generateCards();
+            updateProgress();
+        }
+
+        function generateCards() {
+            const container = document.getElementById('cardsContainer');
+            container.innerHTML = '';
+            
+            // Generate up to 3 cards (current, next, prev)
+            for (let i = 0; i < Math.min(3, students.length - currentStudentIndex); i++) {
+                const studentIndex = currentStudentIndex + i;
+                if (studentIndex >= students.length) break;
+                
+                const student = students[studentIndex];
+                const card = createStudentCard(student, i);
+                container.appendChild(card);
+            }
+        }
+
+        function createStudentCard(student, position) {
+            const card = document.createElement('div');
+            card.className = `student-card-stack ${position === 0 ? 'current' : position === 1 ? 'next' : 'prev'}`;
+            card.dataset.rollNumber = student.roll_number;
+            
+            card.innerHTML = `
+                <div class="roll-number">${student.roll_number}</div>
+                <div class="student-name">
+                    <a href="/student/${student.roll_number}" class="text-decoration-none text-dark fw-bold" onclick="event.stopPropagation()">
+                        ${student.name}
+                        <i class="fas fa-external-link-alt ms-2" style="font-size: 12px; color: #6c757d;"></i>
+                    </a>
+                </div>
+                <div class="text-muted">
+                    <i class="fas fa-hand-paper me-2"></i>Swipe to mark attendance
+                </div>
+            `;
+            
+            if (position === 0) {
+                addTouchEvents(card);
+            }
+            
+            return card;
+        }
+
+        function addTouchEvents(card) {
+            // Touch events
+            card.addEventListener('touchstart', handleTouchStart, { passive: false });
+            card.addEventListener('touchmove', handleTouchMove, { passive: false });
+            card.addEventListener('touchend', handleTouchEnd, { passive: false });
+            
+            // Mouse events for desktop
+            card.addEventListener('mousedown', handleMouseDown);
+            card.addEventListener('mousemove', handleMouseMove);
+            card.addEventListener('mouseup', handleMouseUp);
+            card.addEventListener('mouseleave', handleMouseUp);
+        }
+
+        function handleTouchStart(e) {
+            touchStartY = e.touches[0].clientY;
+            isDragging = true;
+        }
+
+        function handleTouchMove(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            
+            const touchY = e.touches[0].clientY;
+            const deltaY = touchY - touchStartY;
+            const card = e.currentTarget;
+            
+            // Apply transform based on drag distance
+            const rotation = deltaY * 0.1;
+            const scale = Math.max(0.95, 1 - Math.abs(deltaY) * 0.001);
+            
+            card.style.transform = `translateY(${deltaY}px) rotate(${rotation}deg) scale(${scale})`;
+            
+            // Change appearance based on direction
+            if (deltaY < -50) {
+                card.classList.add('present-swipe');
+                card.classList.remove('absent-swipe');
+            } else if (deltaY > 50) {
+                card.classList.add('absent-swipe');
+                card.classList.remove('present-swipe');
+            } else {
+                card.classList.remove('present-swipe', 'absent-swipe');
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            const touchY = e.changedTouches[0].clientY;
+            const deltaY = touchY - touchStartY;
+            const card = e.currentTarget;
+            
+            if (Math.abs(deltaY) > 100) {
+                const status = deltaY < 0 ? 'present' : 'absent';
+                markAttendance(card.dataset.rollNumber, status);
+                animateCardOut(card, status);
+            } else {
+                // Snap back
+                card.style.transform = '';
+                card.classList.remove('present-swipe', 'absent-swipe');
+            }
+        }
+
+        // Mouse events (similar to touch events)
+        function handleMouseDown(e) {
+            touchStartY = e.clientY;
+            isDragging = true;
+            e.currentTarget.style.cursor = 'grabbing';
+        }
+
+        function handleMouseMove(e) {
+            if (!isDragging) return;
+            
+            const deltaY = e.clientY - touchStartY;
+            const card = e.currentTarget;
+            
+            const rotation = deltaY * 0.1;
+            const scale = Math.max(0.95, 1 - Math.abs(deltaY) * 0.001);
+            
+            card.style.transform = `translateY(${deltaY}px) rotate(${rotation}deg) scale(${scale})`;
+            
+            if (deltaY < -50) {
+                card.classList.add('present-swipe');
+                card.classList.remove('absent-swipe');
+            } else if (deltaY > 50) {
+                card.classList.add('absent-swipe');
+                card.classList.remove('present-swipe');
+            } else {
+                card.classList.remove('present-swipe', 'absent-swipe');
+            }
+        }
+
+        function handleMouseUp(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            const deltaY = e.clientY - touchStartY;
+            const card = e.currentTarget;
+            card.style.cursor = 'grab';
+            
+            if (Math.abs(deltaY) > 100) {
+                const status = deltaY < 0 ? 'present' : 'absent';
+                markAttendance(card.dataset.rollNumber, status);
+                animateCardOut(card, status);
+            } else {
+                card.style.transform = '';
+                card.classList.remove('present-swipe', 'absent-swipe');
+            }
+        }
+
+        function markAttendance(rollNumber, status) {
+            // Prevent duplicate marking
+            if (isProcessingAttendance) {
+                console.log('Already processing attendance, skipping...');
+                return;
+            }
+            
+            isProcessingAttendance = true;
+            document.getElementById('processingIndicator').style.display = 'inline';
+            attendanceData[rollNumber].status = status;
+            updateStats();
+            
+            // Send to backend with selected date
+            fetch('/mark_attendance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    roll_number: rollNumber,
+                    status: status,
+                    date: selectedAttendanceDate || new Date().toISOString().split('T')[0]
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(`✅ Attendance marked: ${rollNumber} - ${status}`);
+                } else {
+                    console.error('❌ Error marking attendance:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Network error:', error);
+            })
+            .finally(() => {
+                // Hide processing indicator and allow next operation
+                document.getElementById('processingIndicator').style.display = 'none';
+                setTimeout(() => {
+                    isProcessingAttendance = false;
+                }, 100);
+            });
+        }
+
+        function animateCardOut(card, status) {
+            // Prevent rapid animations
+            if (card.classList.contains('animate-out-up') || card.classList.contains('animate-out-down')) {
+                return;
+            }
+            
+            card.classList.add(status === 'present' ? 'animate-out-up' : 'animate-out-down');
+            
+            setTimeout(() => {
+                currentStudentIndex++;
+                updateProgress();
+                
+                if (currentStudentIndex >= students.length) {
+                    finishAttendance();
+                } else {
+                    generateCards();
+                }
+            }, 400);
+        }
+
+        function updateProgress() {
+            const progress = (currentStudentIndex / students.length) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressText').textContent = `${currentStudentIndex}/${students.length}`;
+        }
+
+        function finishAttendance() {
+            showResults();
+        }
+
+        function showResults() {
+            const presentStudents = Object.entries(attendanceData).filter(([_, data]) => data.status === 'present');
+            const absentStudents = Object.entries(attendanceData).filter(([_, data]) => data.status === 'absent');
+            
+            document.getElementById('finalPresentCount').textContent = presentStudents.length;
+            document.getElementById('finalAbsentCount').textContent = absentStudents.length;
+            
+            // Display present students
+            const presentList = document.getElementById('presentList');
+            presentList.innerHTML = presentStudents.map(([roll, data]) => 
+                `<div class="text-success mb-1">${roll} - ${data.name}</div>`
+            ).join('');
+            
+            // Display absent students
+            const absentList = document.getElementById('absentList');
+            absentList.innerHTML = absentStudents.map(([roll, data]) => 
+                `<div class="text-danger mb-1">${roll} - ${data.name}</div>`
+            ).join('');
+            
+            showPage('results');
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        function goToDashboard() {
+            showPage('dashboard');
+        }
+
+        function goToHistory() {
+            window.location.href = '/history';
+        }
+
+        function goToAdmin() {
+            window.location.href = '/admin';
+        }
+
+        function goToDashboard() {
+            window.location.href = '/dashboard';
+        }
+
+        function startNewAttendance() {
+            resetAttendanceData();
+            startAttendance();
+        }
+
+        function exportData() {
+            const csvData = Object.entries(attendanceData).map(([roll, data]) => 
+                `${roll},${data.name},${data.status || 'not_marked'}`
+            );
+            
+            const csv = 'Roll Number,Name,Status\n' + csvData.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Keyboard shortcuts with throttling
+        document.addEventListener('keydown', function(e) {
+            if (document.getElementById('attendanceMode').classList.contains('active')) {
+                // Prevent rapid keypresses
+                if (isProcessingAttendance) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Clear any existing throttle timeout
+                if (keyPressThrottleTimeout) {
+                    clearTimeout(keyPressThrottleTimeout);
+                }
+                
+                // Throttle keypress events
+                keyPressThrottleTimeout = setTimeout(() => {
+                    const currentCard = document.querySelector('.student-card-stack.current');
+                    if (!currentCard) return;
+                    
+                    let status = null;
+                    if (e.key === 'ArrowUp' || e.key === 'p' || e.key === 'P') {
+                        status = 'present';
+                        e.preventDefault();
+                    } else if (e.key === 'ArrowDown' || e.key === 'a' || e.key === 'A') {
+                        status = 'absent';
+                        e.preventDefault();
+                    }
+                    
+                    if (status && currentCard) {
+                        console.log(`🎯 Processing ${status} for roll: ${currentCard.dataset.rollNumber}`);
+                        markAttendance(currentCard.dataset.rollNumber, status);
+                        animateCardOut(currentCard, status);
+                    }
+                }, 50); // 50ms throttle
+            }
+        });
+    </script>
+</body>
+</html>

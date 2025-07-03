@@ -1,0 +1,3 @@
+# Supabase Configuration
+SUPABASE_URL = "https://xkiywifbnwxnldylwsyk.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhraXl3aWZibnd4bmxkeWx3c3lrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExODg0NDQsImV4cCI6MjA2Njc2NDQ0NH0.DfSq8LR6a2HG8I6YOlN9pmpdej5l8yNP9uPXERquick"
