@@ -457,27 +457,48 @@
             initializeCharts();
             loadDashboardData();
 
-            // Add event listeners for tab changes to resize charts
-            document.querySelectorAll('#dashboardTabs button[data-bs-toggle="pill"]').forEach(tabEl => {
-                tabEl.addEventListener('shown.bs.tab', event => {
-                    const targetPaneId = event.target.getAttribute('data-bs-target');
+            // Prevent multiple event listener attachments
+            if (!window.dashboardTabsListenersAdded) {
+                document.querySelectorAll('#dashboardTabs button[data-bs-toggle="pill"]').forEach(tabEl => {
+                    tabEl.addEventListener('shown.bs.tab', event => {
+                        const targetPaneId = event.target.getAttribute('data-bs-target');
 
-                    // Resize charts in the Analytics tab when it's shown
-                    if (targetPaneId === '#analytics') {
-                        if (charts.attendanceDistribution && typeof charts.attendanceDistribution.resize === 'function') {
-                            charts.attendanceDistribution.resize();
+                        // Resize charts in the Analytics tab when it's shown
+                        if (targetPaneId === '#analytics') {
+                            if (charts.attendanceDistribution && typeof charts.attendanceDistribution.resize === 'function') {
+                                charts.attendanceDistribution.resize();
+                            }
+                            if (charts.weeklyTrends && typeof charts.weeklyTrends.resize === 'function') {
+                                charts.weeklyTrends.resize();
+                            }
+                            if (charts.monthlyPattern && typeof charts.monthlyPattern.resize === 'function') {
+                                charts.monthlyPattern.resize();
+                            }
                         }
-                        if (charts.weeklyTrends && typeof charts.weeklyTrends.resize === 'function') {
-                            charts.weeklyTrends.resize();
-                        }
-                        if (charts.monthlyPattern && typeof charts.monthlyPattern.resize === 'function') {
-                            charts.monthlyPattern.resize();
-                        }
-                    }
-                    // Add similar blocks for other tabs if they contain charts initialized while hidden
+                        // Add similar blocks for other tabs if they contain charts initialized while hidden
+                    });
                 });
-            });
+                window.dashboardTabsListenersAdded = true;
+            }
         });
+
+        // Chart creation helper
+        function createDashboardChart({ id, type, config, storageKey }) {
+            try {
+                const canvas = document.getElementById(id);
+                if (!canvas) {
+                    console.error(`Failed to find canvas: ${id}`);
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+                charts[storageKey] = new Chart(ctx, { type, ...config });
+            } catch (error) {
+                console.error(`Error initializing chart '${storageKey}':`, error);
+                if (config && config.data) {
+                    console.error(`Data used for ${storageKey}:`, JSON.parse(JSON.stringify(config.data)));
+                }
+            }
+        }
 
         // Initialize all charts
         function initializeCharts() {
@@ -489,193 +510,135 @@
 
         // Daily Attendance Chart
         function initializeDailyAttendanceChart() {
-            try {
-                const canvas = document.getElementById('dailyAttendanceChart');
-                if (!canvas) {
-                    console.error('Failed to find canvas: dailyAttendanceChart');
-                    return;
-                }
-                const ctx = canvas.getContext('2d');
-                const dailyStats = dashboardData.daily_stats || [];
-                console.log('Initializing dailyAttendanceChart with dailyStats:', JSON.parse(JSON.stringify(dailyStats)));
-            
-                charts.dailyAttendance = new Chart(ctx, {
-                    type: 'line',
+            const dailyStats = dashboardData.daily_stats || [];
+            createDashboardChart({
+                id: 'dailyAttendanceChart',
+                type: 'line',
+                storageKey: 'dailyAttendance',
+                config: {
                     data: {
-                    labels: dailyStats.map(d => d.date),
-                    datasets: [{
-                        label: 'Present',
-                        data: dailyStats.map(d => d.present),
-                        borderColor: '#2ed573',
-                        backgroundColor: 'rgba(46, 213, 115, 0.1)',
-                        fill: true
-                    }, {
-                        label: 'Absent',
-                        data: dailyStats.map(d => d.absent),
-                        borderColor: '#ff4757',
-                        backgroundColor: 'rgba(255, 71, 87, 0.1)',
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        }
+                        labels: dailyStats.map(d => d.date),
+                        datasets: [
+                            {
+                                label: 'Present',
+                                data: dailyStats.map(d => d.present),
+                                borderColor: '#2ed573',
+                                backgroundColor: 'rgba(46, 213, 115, 0.1)',
+                                fill: true
+                            },
+                            {
+                                label: 'Absent',
+                                data: dailyStats.map(d => d.absent),
+                                borderColor: '#ff4757',
+                                backgroundColor: 'rgba(255, 71, 87, 0.1)',
+                                fill: true
+                            }
+                        ]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'top' } },
+                        scales: { y: { beginAtZero: true } }
                     }
                 }
             });
-            } catch (error) {
-                console.error('Error initializing dailyAttendanceChart:', error);
-                console.error('Data used for dailyAttendanceChart:', JSON.parse(JSON.stringify(dashboardData.daily_stats || [])));
-            }
         }
 
         // Attendance Distribution Chart
         function initializeAttendanceDistributionChart() {
-            try {
-                const canvas = document.getElementById('attendanceDistributionChart');
-                if (!canvas) {
-                    console.error('Failed to find canvas: attendanceDistributionChart');
-                    return;
-                }
-                const ctx = canvas.getContext('2d');
-                const chartData = [dashboardData.total_present || 0, dashboardData.total_absent || 0];
-                console.log('Initializing attendanceDistributionChart with data:', chartData);
-
-                charts.attendanceDistribution = new Chart(ctx, {
-                    type: 'doughnut',
+            createDashboardChart({
+                id: 'attendanceDistributionChart',
+                type: 'doughnut',
+                storageKey: 'attendanceDistribution',
+                config: {
                     data: {
-                    labels: ['Present', 'Absent'],
-                    datasets: [{
-                        data: [dashboardData.total_present || 0, dashboardData.total_absent || 0],
-                        backgroundColor: ['#2ed573', '#ff4757'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        }
+                        labels: ['Present', 'Absent'],
+                        datasets: [{
+                            data: [dashboardData.total_present || 0, dashboardData.total_absent || 0],
+                            backgroundColor: ['#2ed573', '#ff4757'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } }
                     }
                 }
             });
-            } catch (error) {
-                console.error('Error initializing attendanceDistributionChart:', error);
-                console.error('Data used for attendanceDistributionChart:', [dashboardData.total_present || 0, dashboardData.total_absent || 0]);
-            }
         }
 
         // Weekly Trends Chart
         function initializeWeeklyTrendsChart() {
-            try {
-                const canvas = document.getElementById('weeklyTrendsChart');
-                if (!canvas) {
-                    console.error('Failed to find canvas: weeklyTrendsChart');
-                    return;
-                }
-                const ctx = canvas.getContext('2d');
-                const dailyStats = dashboardData.daily_stats || [];
-                console.log('Initializing weeklyTrendsChart with dailyStats (first 7 days):', JSON.parse(JSON.stringify(dailyStats.slice(0, 7))));
-
-                charts.weeklyTrends = new Chart(ctx, {
-                    type: 'bar',
+            const dailyStats = dashboardData.daily_stats || [];
+            createDashboardChart({
+                id: 'weeklyTrendsChart',
+                type: 'bar',
+                storageKey: 'weeklyTrends',
+                config: {
                     data: {
-                    labels: dailyStats.slice(0, 7).map(d => d.date),
-                    datasets: [{
-                        label: 'Attendance %',
-                        data: dailyStats.slice(0, 7).map(d => d.attendance_percentage),
-                        backgroundColor: '#667eea',
-                        borderRadius: 10
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
+                        labels: dailyStats.slice(0, 7).map(d => d.date),
+                        datasets: [{
+                            label: 'Attendance %',
+                            data: dailyStats.slice(0, 7).map(d => d.attendance_percentage),
+                            backgroundColor: '#667eea',
+                            borderRadius: 10
+                        }]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            ticks: {
-                                callback: function(value) {
-                                    return value + '%';
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) { return value + '%'; }
                                 }
                             }
                         }
                     }
                 }
             });
-            } catch (error) {
-                console.error('Error initializing weeklyTrendsChart:', error);
-                console.error('Data used for weeklyTrendsChart:', JSON.parse(JSON.stringify(dashboardData.daily_stats ? dashboardData.daily_stats.slice(0, 7) : [])));
-            }
         }
 
         // Monthly Pattern Chart
         function initializeMonthlyPatternChart() {
-            try {
-                const canvas = document.getElementById('monthlyPatternChart');
-                if (!canvas) {
-                    console.error('Failed to find canvas: monthlyPatternChart');
-                    return;
-                }
-                const ctx = canvas.getContext('2d');
-                const dailyStats = dashboardData.daily_stats || [];
-                console.log('Initializing monthlyPatternChart with dailyStats:', JSON.parse(JSON.stringify(dailyStats)));
-
-                charts.monthlyPattern = new Chart(ctx, {
-                    type: 'line',
+            const dailyStats = dashboardData.daily_stats || [];
+            createDashboardChart({
+                id: 'monthlyPatternChart',
+                type: 'line',
+                storageKey: 'monthlyPattern',
+                config: {
                     data: {
-                    labels: dailyStats.map(d => d.date),
-                    datasets: [{
-                        label: 'Attendance Percentage',
-                        data: dailyStats.map(d => d.attendance_percentage),
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
+                        labels: dailyStats.map(d => d.date),
+                        datasets: [{
+                            label: 'Attendance Percentage',
+                            data: dailyStats.map(d => d.attendance_percentage),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            ticks: {
-                                callback: function(value) {
-                                    return value + '%';
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) { return value + '%'; }
                                 }
                             }
                         }
                     }
                 }
             });
-            } catch (error) {
-                console.error('Error initializing monthlyPatternChart:', error);
-                console.error('Data used for monthlyPatternChart:', JSON.parse(JSON.stringify(dashboardData.daily_stats || [])));
-            }
         }
 
         // Load dashboard data
